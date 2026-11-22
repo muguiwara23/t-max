@@ -1,0 +1,15 @@
+{
+  "name": "t-max",
+  "private": true,
+  "license": "GPL-3.0-only",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}

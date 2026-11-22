@@ -1,0 +1,27 @@
+{
+  "info": {
+    "tmdb_id": "999001",
+    "name": "Último horizonte",
+    "o_name": "Último horizonte",
+    "cover_big": "https://img.example.test/p1_big.jpg",
+    "movie_image": "https://img.example.test/p1.jpg",
+    "releasedate": "2025-03-14",
+    "duration_secs": 6720,
+    "duration": "01:52:00",
+    "plot": "Una piloto de rescate queda atrapada en la última frontera del mapa.",
+    "cast": "Ana Ríos, Mateo Torres, Sofía León",
+    "director": "Paula Méndez",
+    "genre": "Acción / Aventura",
+    "rating": "7.1",
+    "backdrop_path": [
+      "https://img.example.test/p1_bg.jpg"
+    ]
+  },
+  "movie_data": {
+    "stream_id": 5001,
+    "name": "Último horizonte",
+    "added": "1767225600",
+    "category_id": "20",
+    "container_extension": "mkv"
+  }
+}
