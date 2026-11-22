@@ -1,0 +1,36 @@
+{
+  "info": {
+    "name": "Serie de Prueba",
+    "cover": "https://img.example.test/s1.jpg",
+    "plot": "Una serie inventada."
+  },
+  "seasons": [
+    {
+      "season_number": 1,
+      "name": "Temporada 1",
+      "episode_count": 2
+    }
+  ],
+  "episodes": {
+    "1": [
+      {
+        "id": "8001",
+        "episode_num": 1,
+        "title": "Episodio 1",
+        "container_extension": "mkv",
+        "info": {
+          "duration_secs": 2700
+        }
+      },
+      {
+        "id": "8002",
+        "episode_num": "2",
+        "title": "Episodio 2",
+        "container_extension": "mkv",
+        "info": {
+          "duration_secs": 2650
+        }
+      }
+    ]
+  }
+}

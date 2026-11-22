@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/muguiwara23/t-max/contracts/json-schema/playback-bookmark.schema.json",
+  "title": "PlaybackBookmark",
+  "type": "object",
+  "required": [
+    "targetType",
+    "targetId",
+    "updatedAt"
+  ],
+  "properties": {
+    "targetType": {
+      "enum": [
+        "channel",
+        "vod"
+      ]
+    },
+    "targetId": {
+      "$ref": "common.schema.json#/$defs/localId"
+    },
+    "positionMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "durationMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "watchedSec": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "completed": {
+      "type": "boolean"
+    },
+    "updatedAt": {
+      "$ref": "common.schema.json#/$defs/dateTime"
+    }
+  },
+  "additionalProperties": false
+}

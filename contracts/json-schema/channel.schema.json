@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/muguiwara23/t-max/contracts/json-schema/channel.schema.json",
+  "title": "Channel",
+  "type": "object",
+  "required": [
+    "id",
+    "sourceId",
+    "name",
+    "playback"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/localId"
+    },
+    "sourceId": {
+      "$ref": "common.schema.json#/$defs/localId"
+    },
+    "sourceChannelId": {
+      "type": "string",
+      "description": "stream_id (Xtream), id (Stalker) o hash estable de la entrada M3U"
+    },
+    "tvgId": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "customName": {
+      "type": "string"
+    },
+    "number": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "logo": {
+      "$ref": "common.schema.json#/$defs/uri"
+    },
+    "groupIds": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/localId"
+      }
+    },
+    "epgChannelId": {
+      "type": "string",
+      "description": "Asignación final a un canal XMLTV (automática o manual)"
+    },
+    "epgMatch": {
+      "enum": [
+        "id",
+        "name",
+        "manual",
+        "none"
+      ]
+    },
+    "playback": {
+      "type": "object",
+      "description": "Cómo obtener la URL. Nunca guarda una URL con credenciales en claro.",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "direct",
+            "xtream",
+            "stalker"
+          ]
+        },
+        "formats": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "ts",
+              "m3u8",
+              "mp4",
+              "mkv",
+              "unknown"
+            ]
+          }
+        },
+        "directUrlRef": {
+          "$ref": "common.schema.json#/$defs/secretRef"
+        },
+        "stalkerCmd": {
+          "type": "string",
+          "description": "Valor 'cmd' del portal, se resuelve con create_link"
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "catchup": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "enum": [
+            "none",
+            "xtream",
+            "append",
+            "shift",
+            "flussonic",
+            "default"
+          ]
+        },
+        "days": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "template": {
+          "type": "string"
+        }
+      }
+    },
+    "favorite": {
+      "type": "boolean",
+      "default": false
+    },
+    "favoriteIndex": {
+      "type": "integer"
+    },
+    "hidden": {
+      "type": "boolean",
+      "default": false
+    },
+    "locked": {
+      "type": "boolean",
+      "default": false
+    },
+    "audioDelayMs": {
+      "type": "integer"
+    }
+  },
+  "additionalProperties": false
+}

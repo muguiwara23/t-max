@@ -1,0 +1,32 @@
+[
+  {
+    "num": 1,
+    "name": "Canal Uno HD",
+    "stream_type": "live",
+    "stream_id": 1001,
+    "stream_icon": "https://img.example.test/c1.png",
+    "epg_channel_id": "canal1.test",
+    "added": "1767225600",
+    "category_id": "10",
+    "category_ids": [
+      10
+    ],
+    "custom_sid": "",
+    "tv_archive": 0,
+    "direct_source": "",
+    "tv_archive_duration": 0
+  },
+  {
+    "num": 2,
+    "name": "Deportes 24",
+    "stream_type": "live",
+    "stream_id": "1002",
+    "stream_icon": "",
+    "epg_channel_id": null,
+    "added": "1767225600",
+    "category_id": "11",
+    "tv_archive": 1,
+    "direct_source": "",
+    "tv_archive_duration": "3"
+  }
+]

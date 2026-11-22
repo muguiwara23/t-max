@@ -1,0 +1,16 @@
+{
+  "js": [
+    {
+      "id": "*",
+      "title": "Todos"
+    },
+    {
+      "id": "1",
+      "title": "Noticias"
+    },
+    {
+      "id": "2",
+      "title": "Deportes"
+    }
+  ]
+}

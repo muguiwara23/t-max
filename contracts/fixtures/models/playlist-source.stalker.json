@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "6f1c9a52-3b7e-4c1d-9e2a-0b5d8c7f1a02",
+  "type": "stalker",
+  "name": "Portal de prueba",
+  "enabled": true,
+  "stalker": {
+    "portalUrl": "http://stalker.example.test/stalker_portal/c/",
+    "macRef": "secret:src-0002-mac",
+    "timezone": "America/Mexico_City"
+  }
+}

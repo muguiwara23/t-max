@@ -1,0 +1,16 @@
+[
+  {
+    "num": 1,
+    "name": "Película de Prueba (2024)",
+    "stream_type": "movie",
+    "stream_id": 5001,
+    "stream_icon": "https://img.example.test/p1.jpg",
+    "rating": "7.1",
+    "rating_5based": 3.6,
+    "added": "1767225600",
+    "category_id": "20",
+    "container_extension": "mp4",
+    "custom_sid": "",
+    "direct_source": ""
+  }
+]

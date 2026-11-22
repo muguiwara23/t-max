@@ -1,0 +1,89 @@
+{
+  "rules": [
+    "Sin zona horaria = UTC (antes de aplicar timeOffsetMinutes de la fuente)",
+    "Sin stop = inicio del siguiente programa del mismo canal; si es el último, se descarta con aviso",
+    "Programas de canales no declarados se descartan con aviso",
+    "Solapes se conservan y se avisan",
+    "Si hay varios <title>, se toma el primero (preferencia de idioma: v1)"
+  ],
+  "channels": [
+    {
+      "id": "canal1.test",
+      "displayNames": [
+        "Canal Uno",
+        "C1"
+      ],
+      "icon": "https://img.example.test/c1.png"
+    },
+    {
+      "id": "sinnombre.test",
+      "displayNames": []
+    }
+  ],
+  "programmes": [
+    {
+      "epgChannelId": "canal1.test",
+      "title": "Noticias de la Noche",
+      "description": "Resumen del día.",
+      "categories": [
+        "Noticias"
+      ],
+      "startUtc": "2026-11-23T00:00:00Z",
+      "endUtc": "2026-11-23T01:00:00Z"
+    },
+    {
+      "epgChannelId": "canal1.test",
+      "title": "Café & Ciencia",
+      "startUtc": "2026-11-23T01:00:00Z",
+      "endUtc": "2026-11-23T02:30:00Z"
+    },
+    {
+      "epgChannelId": "canal1.test",
+      "title": "Sin zona horaria",
+      "startUtc": "2026-11-23T02:30:00Z",
+      "endUtc": "2026-11-23T03:00:00Z"
+    },
+    {
+      "epgChannelId": "canal1.test",
+      "title": "Sin hora de fin",
+      "startUtc": "2026-11-23T03:00:00Z",
+      "endUtc": "2026-11-23T04:00:00Z"
+    },
+    {
+      "epgChannelId": "canal1.test",
+      "title": "Descripción extensa",
+      "description": "Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ.",
+      "episodeNum": "1.4.",
+      "startUtc": "2026-11-23T04:00:00Z",
+      "endUtc": "2026-11-23T05:00:00Z"
+    },
+    {
+      "epgChannelId": "sinnombre.test",
+      "title": "Desfase +05:30",
+      "startUtc": "2026-11-23T01:00:00Z",
+      "endUtc": "2026-11-23T02:00:00Z"
+    },
+    {
+      "epgChannelId": "sinnombre.test",
+      "title": "Programa solapado",
+      "startUtc": "2026-11-23T01:30:00Z",
+      "endUtc": "2026-11-23T03:00:00Z"
+    }
+  ],
+  "warnings": [
+    {
+      "code": "MISSING_STOP_INFERRED",
+      "channel": "canal1.test",
+      "start": "2026-11-23T03:00:00Z"
+    },
+    {
+      "code": "OVERLAP",
+      "channel": "sinnombre.test",
+      "start": "2026-11-23T01:30:00Z"
+    },
+    {
+      "code": "UNKNOWN_CHANNEL",
+      "channel": "fantasma.test"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "js": {
+    "id": "101",
+    "cmd": "ffmpeg http://stalker.example.test/play/live.php?mac=00:1A:79:00:00:00&stream=101&extension=ts&play_token=FAKEPLAYTOKEN"
+  }
+}

@@ -1,0 +1,8 @@
+#EXTINF:-1 tvg-id="x.test" group-title="Sin cierre,Canal Roto
+https://iptv.example.test/live/u/p/1.ts
+https://iptv.example.test/live/u/p/2.ts
+#EXTINF:abc,Duración inválida
+https://iptv.example.test/live/u/p/3.ts
+#EXTINF:-1 sin coma
+https://iptv.example.test/live/u/p/4.ts
+ftp://example.test/no-soportado

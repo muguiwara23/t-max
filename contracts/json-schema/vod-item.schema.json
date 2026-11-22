@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/muguiwara23/t-max/contracts/json-schema/vod-item.schema.json",
+  "title": "VodItem",
+  "type": "object",
+  "required": [
+    "id",
+    "sourceId",
+    "type",
+    "title"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/localId"
+    },
+    "sourceId": {
+      "$ref": "common.schema.json#/$defs/localId"
+    },
+    "sourceItemId": {
+      "type": "string"
+    },
+    "type": {
+      "enum": [
+        "movie",
+        "series",
+        "season",
+        "episode"
+      ]
+    },
+    "parentId": {
+      "$ref": "common.schema.json#/$defs/localId"
+    },
+    "title": {
+      "type": "string"
+    },
+    "synopsis": {
+      "type": "string"
+    },
+    "poster": {
+      "$ref": "common.schema.json#/$defs/uri"
+    },
+    "backdrop": {
+      "$ref": "common.schema.json#/$defs/uri"
+    },
+    "year": {
+      "type": "integer"
+    },
+    "durationSec": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "rating": {
+      "type": "string"
+    },
+    "genres": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "seasonNumber": {
+      "type": "integer"
+    },
+    "episodeNumber": {
+      "type": "integer"
+    },
+    "containerExtension": {
+      "type": "string"
+    },
+    "groupIds": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/localId"
+      }
+    },
+    "tmdbId": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

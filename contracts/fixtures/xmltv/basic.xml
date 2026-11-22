@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tv generator-info-name="t-max-fixture">
+  <channel id="canal1.test">
+    <display-name lang="es">Canal Uno</display-name>
+    <display-name>C1</display-name>
+    <icon src="https://img.example.test/c1.png"/>
+  </channel>
+  <channel id="sinnombre.test"/>
+  <programme start="20261122180000 -0600" stop="20261122190000 -0600" channel="canal1.test">
+    <title lang="es">Noticias de la Noche</title>
+    <desc lang="es">Resumen del día.</desc>
+    <category lang="es">Noticias</category>
+  </programme>
+  <programme start="20261123010000 +0000" stop="20261123023000 +0000" channel="canal1.test">
+    <title>Café &amp; Ciencia</title>
+  </programme>
+  <programme start="20261123023000" stop="20261123030000" channel="canal1.test">
+    <title>Sin zona horaria</title>
+  </programme>
+  <programme start="20261123030000 +0000" channel="canal1.test">
+    <title>Sin hora de fin</title>
+  </programme>
+  <programme start="20261123040000 +0000" stop="20261123050000 +0000" channel="canal1.test">
+    <title>Descripción extensa</title>
+    <desc>Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ. Descripción larga de prueba con acentos: áéíóú ñ.</desc>
+    <episode-num system="xmltv_ns">1.4.</episode-num>
+  </programme>
+  <programme start="20261123063000 +0530" stop="20261123073000 +0530" channel="sinnombre.test">
+    <title>Desfase +05:30</title>
+  </programme>
+  <programme start="20261123013000 +0000" stop="20261123030000 +0000" channel="sinnombre.test">
+    <title>Programa solapado</title>
+  </programme>
+  <programme start="20261123010000 +0000" stop="20261123020000 +0000" channel="fantasma.test">
+    <title>Canal no declarado</title>
+  </programme>
+</tv>

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/muguiwara23/t-max/contracts/json-schema/programme.schema.json",
+  "title": "Programme",
+  "type": "object",
+  "required": [
+    "epgChannelId",
+    "title",
+    "startUtc",
+    "endUtc"
+  ],
+  "properties": {
+    "epgChannelId": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "subTitle": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "startUtc": {
+      "$ref": "common.schema.json#/$defs/dateTime"
+    },
+    "endUtc": {
+      "$ref": "common.schema.json#/$defs/dateTime"
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "icon": {
+      "$ref": "common.schema.json#/$defs/uri"
+    },
+    "episodeNum": {
+      "type": "string"
+    },
+    "hasArchive": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

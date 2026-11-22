@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/muguiwara23/t-max/contracts/json-schema/capability-report.schema.json",
+  "title": "CapabilityReport",
+  "description": "Lo que un dispositivo y su PlayerAdapter pueden hacer. Se genera en tiempo de ejecución y por pruebas.",
+  "type": "object",
+  "required": [
+    "platform",
+    "engine",
+    "generatedAt",
+    "containers",
+    "features"
+  ],
+  "properties": {
+    "platform": {
+      "enum": [
+        "ios",
+        "ipados",
+        "tvos",
+        "tizen",
+        "webos",
+        "roku"
+      ]
+    },
+    "model": {
+      "type": "string"
+    },
+    "osVersion": {
+      "type": "string"
+    },
+    "engine": {
+      "enum": [
+        "libmpv",
+        "vlckit",
+        "avplayer",
+        "avplay",
+        "html5",
+        "mpegts.js",
+        "roku-video"
+      ]
+    },
+    "engineVersion": {
+      "type": "string"
+    },
+    "generatedAt": {
+      "$ref": "common.schema.json#/$defs/dateTime"
+    },
+    "containers": {
+      "type": "object",
+      "properties": {
+        "ts": {
+          "$ref": "#/$defs/cap"
+        },
+        "hls": {
+          "$ref": "#/$defs/cap"
+        },
+        "dash": {
+          "$ref": "#/$defs/cap"
+        },
+        "mp4": {
+          "$ref": "#/$defs/cap"
+        },
+        "mkv": {
+          "$ref": "#/$defs/cap"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/cap"
+      }
+    },
+    "codecs": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/cap"
+      }
+    },
+    "features": {
+      "type": "object",
+      "properties": {
+        "audioTracks": {
+          "$ref": "#/$defs/cap"
+        },
+        "subtitles": {
+          "$ref": "#/$defs/cap"
+        },
+        "audioDelay": {
+          "$ref": "#/$defs/cap"
+        },
+        "pip": {
+          "$ref": "#/$defs/cap"
+        },
+        "catchupSeek": {
+          "$ref": "#/$defs/cap"
+        },
+        "customHeaders": {
+          "$ref": "#/$defs/cap"
+        },
+        "recording": {
+          "$ref": "#/$defs/cap"
+        },
+        "multiview": {
+          "$ref": "#/$defs/cap"
+        },
+        "afr": {
+          "$ref": "#/$defs/cap"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/cap"
+      }
+    },
+    "maxSimultaneousVideo": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "$defs": {
+    "cap": {
+      "type": "object",
+      "required": [
+        "state"
+      ],
+      "properties": {
+        "state": {
+          "$ref": "common.schema.json#/$defs/capabilityState"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

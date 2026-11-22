@@ -1,0 +1,12 @@
+{
+  "js": {
+    "id": "1",
+    "name": "",
+    "login": "",
+    "status": 0,
+    "mac": "00:1A:79:00:00:00",
+    "stb_type": "MAG250",
+    "timezone": "America/Mexico_City",
+    "locale": "es_MX.utf8"
+  }
+}

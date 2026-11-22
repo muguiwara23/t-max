@@ -1,0 +1,4 @@
+* text=auto eol=lf
+
+# Los fixtures deben conservar BOM, CRLF y bytes exactos
+contracts/fixtures/** -text

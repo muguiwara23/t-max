@@ -1,0 +1,25 @@
+{
+  "platform": "ipados",
+  "model": "(ejemplo)",
+  "osVersion": "27.x",
+  "engine": "libmpv",
+  "generatedAt": "2026-11-22T00:00:00Z",
+  "containers": {
+    "ts": {
+      "state": "unknown",
+      "note": "Pendiente POC"
+    },
+    "hls": {
+      "state": "unknown"
+    }
+  },
+  "features": {
+    "pip": {
+      "state": "unknown",
+      "note": "Requiere salida AVFoundation"
+    },
+    "customHeaders": {
+      "state": "unknown"
+    }
+  }
+}

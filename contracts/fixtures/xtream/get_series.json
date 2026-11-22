@@ -1,0 +1,16 @@
+[
+  {
+    "num": 1,
+    "name": "Serie de Prueba",
+    "series_id": 7001,
+    "cover": "https://img.example.test/s1.jpg",
+    "plot": "Una serie inventada.",
+    "cast": "",
+    "director": "",
+    "genre": "Drama",
+    "releaseDate": "2025-01-01",
+    "last_modified": "1767225600",
+    "rating": "8",
+    "category_id": "30"
+  }
+]

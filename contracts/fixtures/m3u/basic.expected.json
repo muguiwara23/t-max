@@ -1,0 +1,65 @@
+{
+  "header": {
+    "x-tvg-url": "https://epg.example.test/guide.xml.gz"
+  },
+  "entries": [
+    {
+      "name": "Canal Uno HD",
+      "url": "https://iptv.example.test/live/demo_user/demo_pass/1001.ts",
+      "durationSec": -1,
+      "attributes": {
+        "tvg-id": "canal1.test",
+        "tvg-name": "Canal Uno",
+        "tvg-logo": "https://img.example.test/c1.png",
+        "group-title": "Noticias",
+        "tvg-chno": "1"
+      },
+      "extraTags": [],
+      "lineNumber": 2
+    },
+    {
+      "name": "Deportes 24, Señal \"Sur\"",
+      "url": "https://iptv.example.test/live/demo_user/demo_pass/1002.m3u8",
+      "durationSec": -1,
+      "attributes": {
+        "tvg-id": "",
+        "group-title": "Deportes, En Vivo",
+        "catchup": "default",
+        "catchup-days": "3",
+        "catchup-source": "?utc={utc}&lutc={lutc}"
+      },
+      "extraTags": [
+        "#EXTVLCOPT:http-user-agent=TMaxTest/1.0"
+      ],
+      "lineNumber": 4
+    },
+    {
+      "name": "Película de Prueba (2024)",
+      "url": "https://vod.example.test/movie/demo_user/demo_pass/5001.mp4",
+      "durationSec": -1,
+      "attributes": {
+        "group-title": "Películas",
+        "tvg-logo": "https://img.example.test/sin-comillas.png"
+      },
+      "extraTags": [],
+      "lineNumber": 8
+    },
+    {
+      "name": "Radio Ñandú",
+      "url": "http://radio.example.test/stream",
+      "durationSec": 120,
+      "attributes": {
+        "tvg-id": "radio.test",
+        "group-title": "Radio"
+      },
+      "extraTags": [],
+      "lineNumber": 11
+    }
+  ],
+  "warnings": [
+    {
+      "line": 10,
+      "code": "MISSING_URL"
+    }
+  ]
+}

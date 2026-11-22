@@ -1,0 +1,12 @@
+﻿#EXTM3U x-tvg-url="https://epg.example.test/guide.xml.gz"
+#EXTINF:-1 tvg-id="canal1.test" tvg-name="Canal Uno" tvg-logo="https://img.example.test/c1.png" group-title="Noticias" tvg-chno="1",Canal Uno HD
+https://iptv.example.test/live/demo_user/demo_pass/1001.ts
+#EXTINF:-1 tvg-id="" group-title="Deportes, En Vivo" catchup="default" catchup-days="3" catchup-source="?utc={utc}&lutc={lutc}",Deportes 24, Señal "Sur"
+#EXTVLCOPT:http-user-agent=TMaxTest/1.0
+https://iptv.example.test/live/demo_user/demo_pass/1002.m3u8
+
+#EXTINF:-1 group-title='Películas' tvg-logo=https://img.example.test/sin-comillas.png,Película de Prueba (2024)
+https://vod.example.test/movie/demo_user/demo_pass/5001.mp4
+#EXTINF:-1 tvg-id="huerfano.test",Entrada sin URL
+#EXTINF:120 tvg-id="radio.test" group-title="Radio",  Radio Ñandú  
+http://radio.example.test/stream

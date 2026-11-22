@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/muguiwara23/t-max/contracts/json-schema/app-error.schema.json",
+  "title": "AppError",
+  "description": "Error estable y localizable. 'detail' nunca contiene secretos (pasa por redact()).",
+  "type": "object",
+  "required": [
+    "code",
+    "messageKey"
+  ],
+  "properties": {
+    "code": {
+      "enum": [
+        "NET_DNS",
+        "NET_TIMEOUT",
+        "NET_OFFLINE",
+        "NET_TLS",
+        "NET_TOO_MANY_REDIRECTS",
+        "HTTP_4XX",
+        "HTTP_5XX",
+        "AUTH_INVALID",
+        "AUTH_EXPIRED",
+        "AUTH_MAX_CONNECTIONS",
+        "CORS_BLOCKED",
+        "HEADER_FORBIDDEN",
+        "PARSE_M3U_INVALID",
+        "PARSE_XMLTV_INVALID",
+        "PARSE_TOO_LARGE",
+        "PROVIDER_UNEXPECTED",
+        "PLAY_UNSUPPORTED_CONTAINER",
+        "PLAY_UNSUPPORTED_CODEC",
+        "PLAY_DRM",
+        "PLAY_DECODER",
+        "PLAY_STREAM_ENDED",
+        "STORAGE_QUOTA",
+        "STORAGE_UNAVAILABLE",
+        "UNKNOWN"
+      ]
+    },
+    "messageKey": {
+      "type": "string",
+      "description": "Clave i18n, ej. errors.auth_invalid"
+    },
+    "httpStatus": {
+      "type": "integer"
+    },
+    "detail": {
+      "type": "string"
+    },
+    "retryable": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

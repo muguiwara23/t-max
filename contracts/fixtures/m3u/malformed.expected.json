@@ -1,0 +1,65 @@
+{
+  "header": {},
+  "entries": [
+    {
+      "name": "Canal Roto",
+      "url": "https://iptv.example.test/live/u/p/1.ts",
+      "durationSec": -1,
+      "attributes": {
+        "tvg-id": "x.test"
+      },
+      "extraTags": [],
+      "lineNumber": 1
+    },
+    {
+      "name": "https://iptv.example.test/live/u/p/2.ts",
+      "url": "https://iptv.example.test/live/u/p/2.ts",
+      "durationSec": -1,
+      "attributes": {},
+      "extraTags": [],
+      "lineNumber": 3
+    },
+    {
+      "name": "Duración inválida",
+      "url": "https://iptv.example.test/live/u/p/3.ts",
+      "durationSec": -1,
+      "attributes": {},
+      "extraTags": [],
+      "lineNumber": 4
+    },
+    {
+      "name": "",
+      "url": "https://iptv.example.test/live/u/p/4.ts",
+      "durationSec": -1,
+      "attributes": {},
+      "extraTags": [],
+      "lineNumber": 6
+    }
+  ],
+  "warnings": [
+    {
+      "line": 1,
+      "code": "MISSING_HEADER"
+    },
+    {
+      "line": 1,
+      "code": "UNTERMINATED_QUOTE"
+    },
+    {
+      "line": 3,
+      "code": "BARE_URL"
+    },
+    {
+      "line": 4,
+      "code": "INVALID_DURATION"
+    },
+    {
+      "line": 6,
+      "code": "MISSING_NAME"
+    },
+    {
+      "line": 8,
+      "code": "UNSUPPORTED_SCHEME"
+    }
+  ]
+}

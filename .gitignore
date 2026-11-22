@@ -1,0 +1,34 @@
+# Dependencias y builds
+node_modules/
+dist/
+build/
+out/
+*.ipa
+*.wgt
+*.ipk
+*.zip
+ios/Pods/
+.expo/
+
+# Secretos y configuración local — NUNCA subir
+.env
+.env.*
+!.env.example
+*.secret.*
+secrets/
+local-sources.json
+*.p12
+*.mobileprovision
+author.p12
+distributor.p12
+
+# Resultados de pruebas locales (pueden contener URLs reales)
+test-results/local/
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

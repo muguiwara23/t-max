@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/muguiwara23/t-max/contracts/json-schema/m3u-entry.schema.json",
+  "title": "M3uEntry",
+  "description": "Resultado crudo del parser M3U, antes de normalizar a Channel/VodItem.",
+  "type": "object",
+  "required": [
+    "name",
+    "url",
+    "durationSec",
+    "attributes",
+    "lineNumber"
+  ],
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    },
+    "durationSec": {
+      "type": "number",
+      "description": "-1 = en vivo / desconocido"
+    },
+    "attributes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Claves en minúsculas: tvg-id, tvg-name, tvg-logo, group-title, tvg-chno, catchup, catchup-days, catchup-source..."
+    },
+    "extraTags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Líneas #EXTVLCOPT, #KODIPROP, #EXTGRP, etc. asociadas a la entrada"
+    },
+    "lineNumber": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Línea del #EXTINF en el archivo"
+    }
+  },
+  "additionalProperties": false
+}

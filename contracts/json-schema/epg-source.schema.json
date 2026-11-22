@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/muguiwara23/t-max/contracts/json-schema/epg-source.schema.json",
+  "title": "EpgSource",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "kind"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/localId"
+    },
+    "name": {
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "xmltv",
+        "xtream",
+        "stalker"
+      ]
+    },
+    "url": {
+      "$ref": "common.schema.json#/$defs/uri"
+    },
+    "urlSecretRef": {
+      "$ref": "common.schema.json#/$defs/secretRef"
+    },
+    "priority": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "timeOffsetMinutes": {
+      "type": "integer",
+      "minimum": -1440,
+      "maximum": 1440,
+      "default": 0
+    },
+    "pastDays": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 14,
+      "default": 1
+    },
+    "futureDays": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 14,
+      "default": 3
+    },
+    "updateIntervalHours": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "0 = solo manual"
+    },
+    "lastUpdate": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "$ref": "common.schema.json#/$defs/dateTime"
+        },
+        "result": {
+          "enum": [
+            "ok",
+            "partial",
+            "error"
+          ]
+        },
+        "channelCount": {
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

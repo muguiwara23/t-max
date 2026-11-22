@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/muguiwara23/t-max/contracts/json-schema/playlist-source.schema.json",
+  "title": "PlaylistSource",
+  "description": "Fuente añadida por el usuario. Los secretos se guardan aparte y aquí solo se referencian.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "name",
+    "enabled",
+    "schemaVersion"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/localId"
+    },
+    "type": {
+      "enum": [
+        "m3u",
+        "xtream",
+        "stalker"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "sortIndex": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "epgSourceIds": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/localId"
+      }
+    },
+    "preferredFormat": {
+      "enum": [
+        "auto",
+        "ts",
+        "m3u8"
+      ],
+      "default": "auto"
+    },
+    "userAgent": {
+      "type": "string",
+      "maxLength": 512
+    },
+    "lastRefresh": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "$ref": "common.schema.json#/$defs/dateTime"
+        },
+        "result": {
+          "enum": [
+            "ok",
+            "partial",
+            "error"
+          ]
+        },
+        "errorCode": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "at",
+        "result"
+      ]
+    },
+    "m3u": {
+      "type": "object",
+      "required": [
+        "url"
+      ],
+      "properties": {
+        "url": {
+          "$ref": "common.schema.json#/$defs/uri"
+        },
+        "urlSecretRef": {
+          "$ref": "common.schema.json#/$defs/secretRef",
+          "description": "Si la URL lleva credenciales, se guarda completa como secreto"
+        },
+        "localFile": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "xtream": {
+      "type": "object",
+      "required": [
+        "server",
+        "username",
+        "passwordRef"
+      ],
+      "properties": {
+        "server": {
+          "$ref": "common.schema.json#/$defs/uri"
+        },
+        "username": {
+          "type": "string",
+          "minLength": 1
+        },
+        "passwordRef": {
+          "$ref": "common.schema.json#/$defs/secretRef"
+        },
+        "allowedOutputFormats": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "maxConnections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expiresAt": {
+          "$ref": "common.schema.json#/$defs/dateTime"
+        }
+      }
+    },
+    "stalker": {
+      "type": "object",
+      "required": [
+        "portalUrl",
+        "macRef"
+      ],
+      "properties": {
+        "portalUrl": {
+          "$ref": "common.schema.json#/$defs/uri"
+        },
+        "macRef": {
+          "$ref": "common.schema.json#/$defs/secretRef"
+        },
+        "serialRef": {
+          "$ref": "common.schema.json#/$defs/secretRef"
+        },
+        "deviceIdRef": {
+          "$ref": "common.schema.json#/$defs/secretRef"
+        },
+        "timezone": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "m3u"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "m3u"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "xtream"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "xtream"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "stalker"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "stalker"
+        ]
+      }
+    }
+  ],
+  "additionalProperties": false
+}
