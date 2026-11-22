@@ -6,7 +6,7 @@
 
 | Plataforma | Estado | `.ts` directo | HLS | Stalker | Instalación | Equipo de prueba |
 |---|---|---|---|---|---|---|
-| iPhone / iPad | Pendiente POC | Esperado sí (libmpv) | Sí | Esperado sí | `.ipa` sin firmar → Flarestore | iPad, iPhone 12 Pro (iOS 27) |
+| iPhone / iPad | POC compilado (`a11a93d`), pendiente de prueba en el iPad | Esperado sí (libmpv) | Sí | Esperado sí | `.ipa` sin firmar → Flarestore | iPad, iPhone 12 Pro (iOS 27) |
 | Samsung Tizen | Pendiente POC | Por verificar (AVPlay) | Por verificar | Riesgo: cabeceras | Tizen CLI + certificado de la TV | Por definir |
 | LG webOS | Pendiente POC | Por verificar / mpegts.js | Por verificar | Riesgo: cabeceras; plan B: servicio JS | Developer Mode + ares-cli | Por definir |
 | Roku | Pendiente POC | Probablemente no; algunos modelos sí | Sí | Esperado sí | Modo desarrollador, un canal a la vez | Por definir |
