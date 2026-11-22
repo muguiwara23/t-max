@@ -90,6 +90,16 @@ jobs:
             build | tee xcodebuild.log | grep -E '^(\*\*|error:|.*error:|.*warning: .*deprecated)' || true
           test -d build/Build/Products/Release-iphoneos/*.app
 
+      - name: Verificar contenido de la app
+        run: |
+          APP=$(ls -d build/Build/Products/Release-iphoneos/*.app | head -1)
+          ls -la "$APP" | head -40
+          test -f "$APP/main.jsbundle" && echo "OK: main.jsbundle incluido ($(du -h "$APP/main.jsbundle" | cut -f1))"
+          for k in CFBundleIdentifier CFBundleShortVersionString MinimumOSVersion UIDeviceFamily NSAppTransportSecurity; do
+            echo "$k = $(/usr/libexec/PlistBuddy -c "Print :$k" "$APP/Info.plist" 2>/dev/null | tr '\n' ' ')"
+          done
+          echo "Tamaño de la app: $(du -sh "$APP" | cut -f1)"
+
       - name: Empaquetar .ipa
         run: |
           rm -rf Payload && mkdir Payload
