@@ -26,6 +26,6 @@ El desarrollo se hace desde Windows 11, sin Mac. iOS exige macOS y Xcode para co
 - Los certificados de Tizen y cualquier dato privado, si alguna vez se necesitan en CI, van en GitHub Secrets.
 - Las compilaciones de iOS se lanzan a mano (`workflow_dispatch`) o al crear un tag, no en cada commit.
 
-## Pendiente
+## Licencia
 
-- Elegir la licencia del código. Si se usan componentes GPL (por ejemplo, expo-mpv), conviene publicar T-Max como GPL-3.0.
+GPL-3.0 (decidido el 2026-11-22), compatible con expo-mpv (GPL-3.0) y MPVKit (LGPL/GPL).

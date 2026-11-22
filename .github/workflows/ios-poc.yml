@@ -1,0 +1,114 @@
+name: POC iOS (libmpv)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'poc/ios/**'
+      - '.github/workflows/ios-poc.yml'
+
+concurrency:
+  group: ios-poc-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: poc/ios
+
+jobs:
+  check:
+    name: Tipos y pruebas (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: poc/ios/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  build-ios:
+    name: Compilar .ipa sin firmar (macOS)
+    needs: check
+    runs-on: macos-15
+    timeout-minutes: 75
+    env:
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: poc/ios/package-lock.json
+
+      - name: Elegir el Xcode más reciente instalado
+        run: |
+          ls -d /Applications/Xcode*.app
+          XCODE=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          echo "Usando $XCODE"
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+
+      - run: npm ci
+
+      - name: Restaurar caché de MPVKit
+        uses: actions/cache@v4
+        with:
+          path: poc/ios/node_modules/expo-mpv/ios/Frameworks
+          key: mpvkit-${{ hashFiles('poc/ios/package-lock.json') }}
+
+      - name: Generar proyecto nativo (expo prebuild)
+        run: npx expo prebuild --platform ios --no-install --clean
+
+      - name: Instalar CocoaPods
+        run: cd ios && pod install
+
+      - name: Compilar (Release, sin firma)
+        run: |
+          WS=$(ls -d ios/*.xcworkspace | head -1)
+          SCHEME=$(basename "$WS" .xcworkspace)
+          echo "Workspace: $WS  Scheme: $SCHEME"
+          set -o pipefail
+          xcodebuild \
+            -workspace "$WS" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build | tee xcodebuild.log | grep -E '^(\*\*|error:|.*error:|.*warning: .*deprecated)' || true
+          test -d build/Build/Products/Release-iphoneos/*.app
+
+      - name: Empaquetar .ipa
+        run: |
+          rm -rf Payload && mkdir Payload
+          cp -R build/Build/Products/Release-iphoneos/*.app Payload/
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          zip -qry "T-Max-POC-${SHORT_SHA}.ipa" Payload
+          ls -lh *.ipa
+
+      - name: Subir .ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: T-Max-POC-ipa-sin-firmar
+          path: poc/ios/*.ipa
+          retention-days: 14
+
+      - name: Subir log de compilación si falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: poc/ios/xcodebuild.log
+          retention-days: 7

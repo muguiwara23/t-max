@@ -22,6 +22,7 @@ Lee esto antes de tocar el repositorio.
 - `docs/` — arquitectura, ADRs, compatibilidad, seguridad, backlog.
 - `contracts/` — JSON Schema, fixtures sintéticos y casos dorados que todos los clientes deben pasar.
 - `packages/core` — (futuro) dominio en TypeScript: parsers M3U/XMLTV, clientes Xtream/Stalker, modelos.
+- `poc/` — pruebas de viabilidad desechables (Fase 0). No son la app final.
 - `clients/` — (futuro) `ios` (React Native), `tv-web` (Tizen + webOS), `roku` (BrightScript).
 
 No crear carpetas vacías para fases futuras.

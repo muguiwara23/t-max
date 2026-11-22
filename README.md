@@ -10,7 +10,7 @@ Reproductor IPTV multiplataforma, local-first, para uso personal y familiar.
 
 | Orden | Plataforma | Cliente | Estado |
 |---|---|---|---|
-| 1 | iPhone / iPad | React Native (TypeScript) + libmpv (MPVKit) | Fase 0 — viabilidad |
+| 1 | iPhone / iPad | React Native (TypeScript) + libmpv (MPVKit) | Fase 0 — POC en [`poc/ios`](poc/ios) |
 | 2 | Samsung Tizen | Web app TypeScript + AVPlay | Pendiente |
 | 2 | LG webOS | Web app TypeScript + HTML5 media | Pendiente |
 | 3 | Roku | BrightScript + SceneGraph | Pendiente |
@@ -29,6 +29,10 @@ Ninguna plataforma se marca como compatible hasta tener una prueba reproducible 
 - [Inventario de funciones](docs/feature-backlog.md)
 - [Plan de pruebas de viabilidad (Fase 0)](docs/poc-plan.md)
 - [Contratos de datos](contracts/)
+
+## Licencia
+
+GPL-3.0 — ver [LICENSE](LICENSE).
 
 ## Aviso
 
