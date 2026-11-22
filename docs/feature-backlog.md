@@ -91,14 +91,15 @@ Funciones que se esperan de un reproductor IPTV completo, descritas en palabras 
 | Temporadas y episodios | v1 |
 | Continuar viendo e historial | v1 |
 
-## Recordatorios
+## Mis programas
 
 | Función | Prioridad |
 |---|---|
-| Recordatorio de un programa desde la guía (notificación) | v1 (según plataforma) |
-| Lista de recordatorios | v1 |
+| Guardar un programa desde la guía o desde "A continuación" | v1 |
+| Aviso cuando empieza y salto al canal (iOS: notificación del sistema; TV: con la app abierta) | v1 |
+| Lista de programas guardados, editar y borrar | v1 |
 
-## Grabación (fuera del MVP, sin bloquear la arquitectura)
+## DVR (grabación en el servidor de Dispatcharr; ver ADR-0008)
 
 | Función | Prioridad |
 |---|---|

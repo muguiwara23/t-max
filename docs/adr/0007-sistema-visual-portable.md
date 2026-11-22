@@ -18,7 +18,7 @@ Cada plataforma dibuja de forma distinta:
 1. **Una sola fuente de verdad:** `design/tokens.json`. Cada cliente genera sus constantes desde ahí; ningún valor se edita a mano en una plataforma.
 2. **Mínimo común denominador como base, mejoras opcionales encima:**
    - Profundidad por tonos de fondo (`base < panel < raised`), sin sombras.
-   - El vidrio con desenfoque es una mejora **solo de iOS**. En TV se sustituye por `overlay.glassFallback`, un panel oscuro casi opaco.
+   - **Sin desenfoque en ninguna plataforma**, iPad incluido, para no gastar RAM ni GPU. Los paneles sobre el video usan `overlay.panel` (oscuro semitransparente). *Cambio del 2026-11-22 a petición de Arturo; antes el vidrio era una mejora solo de iOS.*
    - Animaciones solo de opacidad, traslación y escala.
 3. **Dos densidades:** `touch` (pt, objetivos de 44 pt) y `tv` (px a 1920×1080, texto mínimo de 20 px, margen seguro del 5%).
 4. **Foco en TV:** anillo lima de 4 px + escala 1.04. Nunca solo color.
@@ -27,7 +27,7 @@ Cada plataforma dibuja de forma distinta:
 
 ## Consecuencias
 
-- Cada componente nuevo se diseña primero en su versión sin desenfoque. Si funciona así, funciona en todas partes.
+- Al no haber efectos exclusivos de una plataforma, la misma maqueta vale para todas.
 - Roku necesita un set de imágenes 9-patch por radio (`sm`, `md`, `lg`, `pill`), exportadas para FHD y HD.
 - El texto terciario (`#6C727C`, contraste 3.7:1) solo se usa en tamaños grandes o información no esencial.
 - La maqueta se revisa en dos tamaños (iPad y TV 1080p) antes de escribir código.
