@@ -99,7 +99,7 @@ Funciones que se esperan de un reproductor IPTV completo, descritas en palabras 
 | Aviso cuando empieza y salto al canal (iOS: notificación del sistema; TV: con la app abierta) | v1 |
 | Lista de programas guardados, editar y borrar | v1 |
 
-## DVR (grabación en el servidor de Dispatcharr; ver ADR-0008)
+## DVR (grabación en el dispositivo; ver ADR-0008)
 
 | Función | Prioridad |
 |---|---|

@@ -1,6 +1,6 @@
 # ADR-0008: Secciones, navegación, Mis programas y DVR
 
-**Estado:** Aceptado (DVR condicionado)
+**Estado:** Aceptado (DVR por plataforma)
 **Fecha:** 2026-11-22
 **Decide:** Arturo
 
@@ -36,15 +36,24 @@ La búsqueda está en la barra superior de cada sección.
 
 Los recordatorios se guardan en el dispositivo.
 
-### DVR
+### DVR: grabación en el propio dispositivo
 
-Grabar en el propio dispositivo no es viable de forma general: iOS no permite grabar en segundo plano y las TVs no dan acceso a disco. Por eso:
+Decisión de Arturo: **la grabación se guarda en el dispositivo**, no en el servidor. El stream `.ts` se escribe tal cual a un archivo, sin convertirlo, mientras llega por la red.
 
-- **Con Dispatcharr:** la grabación la hace el servidor. Dispatcharr tiene DVR y una API REST que cubre las grabaciones; T-Max solo programa, lista y reproduce. Funciona igual en todas las plataformas. Requiere configurar un token de API de Dispatcharr en Ajustes.
-- **Con otros proveedores (Xtream/M3U/Stalker):** no hay API estándar de grabación. La sección DVR muestra solo las grabaciones del servidor de Dispatcharr si existe, o queda deshabilitada con una explicación.
-- Grabación local en iPad con la app abierta: posible, pero queda para el futuro.
+| Plataforma | Viabilidad | Condiciones |
+|---|---|---|
+| iPhone/iPad | **Sí** | Con la app abierta (también mientras ves otro canal). iOS suspende las apps en segundo plano, así que una grabación programada solo se hace si la app está abierta a esa hora. Los archivos quedan en la app y son visibles en la app Archivos. |
+| Samsung Tizen | Por verificar | Depende de que la web app pueda escribir en almacenamiento USB o interno. Se prueba en la Fase 0. |
+| LG webOS | Por verificar | Posible con un servicio JS de la app escribiendo en USB. Se prueba en la Fase 0. |
+| Roku | **No** | Roku no ofrece almacenamiento persistente para video. La sección DVR se oculta. |
+
+Reglas comunes:
+
+- Grabar mientras ves otro canal usa **dos conexiones** del proveedor. La app revisa `max_connections` y avisa antes de grabar si no alcanza.
+- Margen configurable antes y después del programa (de la EPG).
+- Aviso de espacio libre antes de empezar.
 
 ## Consecuencias
 
-- La API REST de Dispatcharr se valida en una prueba propia antes de diseñar la sección DVR.
+- La grabación local se prueba primero en iPad (rápido de validar con libmpv/descarga directa del `.ts`).
 - El modelo `Reminder` (recordatorio) se agrega a `contracts/` cuando se implemente Mis programas.

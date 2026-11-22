@@ -9,6 +9,7 @@
 | [0005](0005-desarrollo-limpio-y-repo-publico.md) | Desarrollo limpio y reglas del repositorio público | Aceptado |
 | [0006](0006-tipos-de-fuente.md) | Xtream, M3U y Stalker | Aceptado, Stalker condicionado |
 | [0007](0007-sistema-visual-portable.md) | Sistema visual portable (tokens únicos, sin desenfoque, foco lima) | Aceptado |
-| [0008](0008-secciones-navegacion-mis-programas-dvr.md) | Secciones, navegación de una lista, Mis programas y DVR | Aceptado, DVR condicionado |
+| [0008](0008-secciones-navegacion-mis-programas-dvr.md) | Secciones, navegación de una lista, Mis programas y DVR en el dispositivo | Aceptado |
+| [0009](0009-metadatos-peliculas-series.md) | Datos de Películas y Series: proveedor primero, TMDB opcional | Aceptado |
 
 Formato: Contexto → Decisión → Opciones → Consecuencias → Acciones. Las decisiones no se borran: se marcan como "Reemplazada por ADR-XXXX".
