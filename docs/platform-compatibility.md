@@ -6,7 +6,7 @@
 
 | Plataforma | Estado | `.ts` directo | HLS | Stalker | Instalación | Equipo de prueba |
 |---|---|---|---|---|---|---|
-| iPhone / iPad | POC en curso — **TS directo: OK** (ver abajo) | Esperado sí (libmpv) | Sí | Esperado sí | `.ipa` sin firmar → Flarestore | iPad, iPhone 12 Pro (iOS 27) |
+| iPhone / iPad | **go** — POC superado en iPad (ver abajo) | Esperado sí (libmpv) | Sí | Esperado sí | `.ipa` sin firmar → Flarestore | iPad, iPhone 12 Pro (iOS 27) |
 | Samsung Tizen | Pendiente POC | Por verificar (AVPlay) | Por verificar | Riesgo: cabeceras | Tizen CLI + certificado de la TV | Por definir |
 | LG webOS | Pendiente POC | Por verificar / mpegts.js | Por verificar | Riesgo: cabeceras; plan B: servicio JS | Developer Mode + ares-cli | Por definir |
 | Roku | Pendiente POC | Probablemente no; algunos modelos sí | Sí | Esperado sí | Modo desarrollador, un canal a la vez | Por definir |
@@ -44,10 +44,10 @@
 | Instalación con Flarestore | OK |
 | Canal en vivo `.ts` directo — H.264 960x540 25 fps, AAC 2.0 | **OK** — primer cuadro en 1554 ms, decodificación por hardware (VideoToolbox), sin rebuffering |
 | Pistas de audio | Detectadas (1) |
-| Mismo canal en `.m3u8` | Pendiente |
-| Zapping ×20 | Pendiente |
-| HEVC / 1080p / 50-60 fps | Pendiente |
-| Segundo plano, rotación, 15 min continuos | Pendiente |
-| Stream Apple Advanced (subtítulos y varias pistas de audio) | Pendiente |
+| Mismo canal en `.m3u8` | OK (reportado por Arturo) |
+| Zapping repetido | OK, fluido (reportado) |
+| Pérdida de paquetes en la red | Se recupera rápido; los cortes son de la red, no del reproductor (reportado) |
+| Resto de la lista (segundo plano, rotación, uso prolongado, stream Apple Advanced) | OK (reportado) |
+| Segundo perfil Xtream | OK (reportado) |
 
-Conclusión parcial: el riesgo principal (MPEG-TS por HTTP en Apple) queda **resuelto** con libmpv.
+**Decisión: go.** El riesgo principal (MPEG-TS por HTTP en Apple) queda resuelto con libmpv. Las métricas detalladas solo se registraron para TS; el resto lo reportó Arturo tras probarlo en su iPad.

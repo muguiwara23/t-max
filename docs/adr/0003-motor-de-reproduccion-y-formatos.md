@@ -1,6 +1,6 @@
 # ADR-0003: Motor de reproducción y estrategia de formatos
 
-**Estado:** Propuesto (se confirma por plataforma en la Fase 0)
+**Estado:** Aceptado para iOS (POC en iPad superado el 2026-11-22); pendiente en Tizen, webOS y Roku
 **Fecha:** 2026-11-22
 
 ## Contexto
