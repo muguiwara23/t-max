@@ -83,6 +83,7 @@ export class StalkerClient {
   private readonly cfg: StalkerConfig;
   private readonly api: string;
   private token: string | null = null;
+  private pending: Promise<void> | null = null;
 
   constructor(http: HttpClient, cfg: StalkerConfig) {
     this.http = http;
@@ -102,11 +103,40 @@ export class StalkerClient {
   }
 
   private async call(params: Record<string, string>): Promise<unknown> {
-    if (!this.token && params.action !== 'handshake') await this.handshake();
+    if (!this.token && params.action !== 'handshake') await this.ensureToken();
     return getJson(this.http, { url: this.url(params), headers: stalkerHeaders(this.cfg, this.token ?? undefined), timeoutMs: 30000 }, this.secrets);
   }
 
+  /** Olvida el token actual (p. ej. si otro proceso hizo handshake con la misma MAC). */
+  resetToken(): void {
+    this.token = null;
+  }
+
+  /** Un solo handshake a la vez: pedir dos tokens seguidos con la misma MAC invalida el primero. */
+  private ensureToken(): Promise<void> {
+    if (!this.pending) {
+      this.pending = this.handshake().finally(() => {
+        this.pending = null;
+      });
+    }
+    return this.pending;
+  }
+
+  /** Handshake + get_profile: muchos portales no activan el token hasta pedir el perfil. */
   async handshake(): Promise<void> {
+    await this.rawHandshake();
+    try {
+      await getJson(
+        this.http,
+        { url: this.url({ type: 'stb', action: 'get_profile', hd: '1', stb_type: 'MAG250', num_banks: '2', ver: 'ImageDescription: 0.2.18-r23-250; PORTAL version: 5.6.1' }), headers: stalkerHeaders(this.cfg, this.token ?? undefined), timeoutMs: 15000 },
+        this.secrets,
+      );
+    } catch {
+      // Hay portales que no exponen get_profile; el token puede servir igual.
+    }
+  }
+
+  private async rawHandshake(): Promise<void> {
     const res = await getJson(
       this.http,
       { url: this.url({ type: 'stb', action: 'handshake', token: '' }), headers: stalkerHeaders(this.cfg), timeoutMs: 15000 },
@@ -129,11 +159,36 @@ export class StalkerClient {
     return parseStalkerChannels(await this.call({ type: 'itv', action: 'get_all_channels' }));
   }
 
-  /** Resuelve la URL real (suele caducar: pedirla justo antes de reproducir). */
-  async createLink(cmd: string): Promise<{ url: string; headers: Record<string, string> }> {
-    const res = await this.call({ type: 'itv', action: 'create_link', cmd, forced_storage: 'undefined', disable_ad: '0' });
-    const out = toStr(obj(js(res)).cmd);
-    if (!out) throw new AppError('PROVIDER_UNEXPECTED', 'El portal no devolvió la URL del canal.');
-    return { url: stripCmd(out), headers: { 'User-Agent': MAG_USER_AGENT } };
+  /**
+   * Resuelve la URL real (suele caducar: pedirla justo antes de reproducir).
+   * Si el token ya no sirve (otro handshake con la misma MAC, sesión vencida), se renueva y se reintenta una vez.
+   */
+  async createLink(cmd: string, opts: { forceNewToken?: boolean } = {}): Promise<{ url: string; headers: Record<string, string> }> {
+    if (opts.forceNewToken) this.resetToken();
+    const attempt = async (): Promise<string | null> => {
+      const res = await this.call({ type: 'itv', action: 'create_link', cmd, series: '', forced_storage: 'undefined', disable_ad: '0', download: '0' });
+      const out = toStr(obj(js(res)).cmd);
+      const url = out ? stripCmd(out) : null;
+      // Algunos portales devuelven el cmd sin resolver (localhost) cuando el token no es válido.
+      return url && !/^https?:\/\/(localhost|127\.0\.0\.1)(:|\/)/i.test(url) ? url : null;
+    };
+    let url: string | null = null;
+    try {
+      url = await attempt();
+    } catch (e) {
+      if (!(e instanceof AppError) || (e.code !== 'AUTH_INVALID' && e.code !== 'HTTP_4XX')) throw e;
+    }
+    if (!url) {
+      this.resetToken();
+      url = await attempt();
+    }
+    if (!url) throw new AppError('PROVIDER_UNEXPECTED', 'El portal no devolvió la URL del canal.');
+    return { url, headers: this.playbackHeaders() };
+  }
+
+  /** Cabeceras para el servidor de video (algunos comprueban User-Agent y cookie de MAC). */
+  playbackHeaders(): Record<string, string> {
+    const h = stalkerHeaders(this.cfg);
+    return { 'User-Agent': h['User-Agent']!, Cookie: h.Cookie! };
   }
 }

@@ -4,7 +4,8 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { redact } from '@tmax/core';
 
-import { resolvePlayback } from '../data/playback';
+import { resolvePlayback, type PlaybackTarget } from '../data/playback';
+import { fetchHttp } from '../platform/http';
 import type { ChannelItem } from '../data/queries';
 import { colors } from '../theme';
 import { T } from './kit';
@@ -39,29 +40,70 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
     setSubtitle: (id) => void (id === null ? mpv.current?.setPropertyString('sid', 'no') : mpv.current?.setSubtitleTrack(id)),
   }));
 
-  useEffect(() => {
-    let cancelled = false;
+  const target = useRef<PlaybackTarget | null>(null);
+  const retried = useRef(false);
+  const loadSeq = useRef(0);
+
+  const load = async (forceNewToken: boolean) => {
+    const seq = ++loadSeq.current;
     setError(null);
     if (!channel) {
+      target.current = null;
       setSource(undefined);
       return;
     }
-    (async () => {
-      try {
-        const target = await resolvePlayback(channel);
-        if (cancelled) return;
-        await mpv.current?.setPropertyString('network-timeout', '20').catch(() => {});
-        if (target.userAgent) await mpv.current?.setPropertyString('user-agent', target.userAgent).catch(() => {});
-        started.current = { at: Date.now(), done: false, format: target.format };
-        setSource(target.url);
-      } catch (e) {
-        if (!cancelled) setError(redact(e instanceof Error ? e.message : String(e)));
-      }
-    })();
+    try {
+      const t = await resolvePlayback(channel, { forceNewToken });
+      if (seq !== loadSeq.current) return;
+      target.current = t;
+      const m = mpv.current;
+      await m?.setPropertyString('network-timeout', '20').catch(() => {});
+      // Cabeceras por canal: Stalker necesita User-Agent MAG y cookie; el resto, las de mpv por defecto.
+      const ua = t.headers?.['User-Agent'] ?? 'libmpv';
+      const extra = Object.entries(t.headers ?? {})
+        .filter(([k]) => k.toLowerCase() !== 'user-agent')
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(',');
+      await m?.setPropertyString('user-agent', ua).catch(() => {});
+      await m?.setPropertyString('http-header-fields', extra).catch(() => {});
+      started.current = { at: Date.now(), done: false, format: t.format };
+      // Forzar recarga aunque la URL sea igual a la anterior.
+      setSource(undefined);
+      setTimeout(() => seq === loadSeq.current && setSource(t.url), 0);
+    } catch (e) {
+      if (seq === loadSeq.current) setError(redact(e instanceof Error ? e.message : String(e)));
+    }
+  };
+
+  useEffect(() => {
+    retried.current = false;
+    load(false);
     return () => {
-      cancelled = true;
+      loadSeq.current++;
     };
   }, [channel?.key]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Error del reproductor: en Stalker se reintenta una vez con token nuevo; si no, se explica qué pasó. */
+  const onPlayerError = async (raw: string) => {
+    if (channel?.source_type === 'stalker' && !retried.current) {
+      retried.current = true;
+      load(true);
+      return;
+    }
+    let detail = '';
+    const t = target.current;
+    if (t) {
+      try {
+        const res = await fetchHttp.get({ url: t.url, headers: { ...(t.headers ?? {}), Range: 'bytes=0-0' }, timeoutMs: 8000 });
+        if (res.status >= 400) detail = ` El servidor respondió HTTP ${res.status}${res.status === 401 || res.status === 403 ? ' (acceso denegado o enlace vencido)' : res.status === 404 ? ' (canal no encontrado)' : ''}.`;
+      } catch {
+        detail = ' El servidor de video no responde.';
+      }
+    }
+    const code = /-?\d+/.exec(raw)?.[0];
+    const base = code === '-13' || /loading failed/i.test(raw) ? 'No se pudo abrir el canal.' : redact(raw);
+    setError(`${base}${detail}${code ? ` (mpv ${code})` : ''}`);
+  };
 
   return (
     <View style={[styles.box, style]}>
@@ -77,12 +119,14 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
             onStarted?.(Date.now() - started.current.at, started.current.format);
           }
         }}
-        onError={({ nativeEvent }) => setError(redact(nativeEvent.error))}
+        onError={({ nativeEvent }) => {
+          onPlayerError(nativeEvent.error);
+        }}
       />
       {(error || (channel && state !== 'playing' && state !== 'paused')) && (
         <View style={styles.status} pointerEvents="none">
           <T kind="label" weight="semibold" color={error ? colors.danger : colors.textSecondary}>
-            {error ? `No se pudo reproducir: ${error}` : state === 'buffering' ? 'Cargando…' : 'Conectando…'}
+            {error ? error : state === 'buffering' ? 'Cargando…' : 'Conectando…'}
           </T>
         </View>
       )}

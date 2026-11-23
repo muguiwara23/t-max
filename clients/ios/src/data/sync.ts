@@ -3,7 +3,6 @@
 import {
   AppError,
   M3uParser,
-  StalkerClient,
   XmltvParser,
   XtreamClient,
   redact,
@@ -15,6 +14,7 @@ import { fetchHttp } from '../platform/http';
 import { replaceSourceContent } from './db';
 import { mapM3u, mapProgrammes, mapProviderLive, resolveEpgIds, type ChannelRow } from './mapping';
 import { getSecrets, recordRefresh, type Source } from './sources';
+import { stalkerFor } from './stalker-session';
 
 export type Progress = (msg: string) => void;
 
@@ -101,11 +101,8 @@ export async function refreshSource(source: Source, progress: Progress = () => {
       epgUrl = source.config.epgUrl || secrets.epgUrlSecret || parsed.header['x-tvg-url'] || parsed.header['url-tvg'] || null;
       if (epgUrl && epgUrl.includes(',')) epgUrl = epgUrl.split(',')[0]!.trim();
     } else {
-      const client = new StalkerClient(fetchHttp, {
-        portalUrl: source.config.server ?? '',
-        mac: secrets.mac ?? '',
-        timezone: source.config.timezone,
-      });
+      const client = stalkerFor(source, secrets);
+      client.resetToken(); // token nuevo en cada actualización; reproducción usa este mismo cliente
       progress('Conectando al portal…');
       const [genres, live] = await Promise.all([client.genres(), client.channels()]);
       ({ groups, channels } = mapProviderLive(source.id, genres, live));

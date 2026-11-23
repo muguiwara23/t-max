@@ -45,16 +45,42 @@ test('Stalker: handshake → token → canales → create_link', async () => {
       assert.equal(q.cmd, 'ffmpeg http://localhost/ch/101_');
       return { body: fixtureJson('stalker/create_link.json') };
     }
+    if (q.action === 'get_profile') return { body: fixtureJson('stalker/get_profile.json') };
     return undefined;
   });
   const c = new StalkerClient(http, cfg);
-  const genres = await c.genres();
+  // Dos peticiones en paralelo sin token → un solo handshake.
+  const [genres] = await Promise.all([c.genres(), c.channels()]);
   assert.deepEqual(genres.map((g) => g.name), ['Noticias', 'Deportes']);
   const channels = await c.channels();
   const link = await c.createLink(channels[0]!.stalkerCmd!);
   assert.ok(link.url.startsWith('http://stalker.example.test/play/live.php?'));
   assert.equal(redact(link.url), 'http://stalker.example.test/play/live.php?mac=***&stream=101&extension=ts&play_token=***');
   assert.equal(http.calls.filter((r) => query(r.url).action === 'handshake').length, 1);
+  assert.equal(link.headers['User-Agent'], expected.headers['User-Agent']);
+  assert.ok(link.headers.Cookie?.startsWith('mac=00%3A1A%3A79'));
+});
+
+test('Stalker: token invalidado → renueva el token y reintenta create_link una vez', async () => {
+  let handshakes = 0;
+  const http = fakeHttp((req) => {
+    const q = query(req.url);
+    if (q.action === 'handshake') {
+      handshakes++;
+      return { body: { js: { token: `TOKEN-${handshakes}` } } };
+    }
+    if (q.action === 'get_profile') return { body: { js: {} } };
+    if (q.action === 'create_link') {
+      // El primer token ya no sirve: el portal devuelve el cmd sin resolver.
+      if (req.headers?.Authorization === 'Bearer TOKEN-1') return { body: { js: { cmd: 'ffmpeg http://localhost/ch/101_' } } };
+      return { body: fixtureJson('stalker/create_link.json') };
+    }
+    return undefined;
+  });
+  const c = new StalkerClient(http, cfg);
+  const link = await c.createLink('ffmpeg http://localhost/ch/101_');
+  assert.ok(link.url.startsWith('http://stalker.example.test/play/'));
+  assert.equal(handshakes, 2);
 });
 
 test('Stalker: portal sin token = MAC no registrada', async () => {
