@@ -1,14 +1,8 @@
 name: App iOS (T-Max)
 
+# Solo manual: Arturo la lanza desde la pestaña Actions (las compilaciones de macOS son las costosas).
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'clients/ios/**'
-      - 'packages/core/**'
-      - 'design/tokens.json'
-      - '.github/workflows/ios.yml'
 
 concurrency:
   group: ios-app-${{ github.ref }}

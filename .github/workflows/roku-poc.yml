@@ -1,0 +1,27 @@
+name: POC Roku
+
+# Solo manual: Arturo la lanza desde la pestaña Actions cuando quiera el .zip.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  zip:
+    name: Validar y empaquetar (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validar BrightScript
+        run: npx --yes brighterscript@0.73.8 --rootDir poc/roku --createPackage false --staging-dir /tmp/stage
+      - name: Empaquetar
+        run: sh scripts/build-roku-poc.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: T-Max-Roku-POC
+          path: dist/T-Max-Roku-POC.zip

@@ -1,12 +1,8 @@
 name: POC iOS (libmpv)
 
+# Solo manual: Arturo la lanza desde la pestaña Actions (las compilaciones de macOS son las costosas).
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'poc/ios/**'
-      - '.github/workflows/ios-poc.yml'
 
 concurrency:
   group: ios-poc-${{ github.ref }}

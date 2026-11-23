@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Trabajo de red y JSON fuera del hilo de dibujo (roUrlTransfer no se puede usar en la escena). -->
+<component name="PocTask" extends="Task">
+  <interface>
+    <field id="request" type="assocarray" />
+    <field id="result" type="assocarray" />
+  </interface>
+  <script type="text/brightscript" uri="PocTask.brs" />
+</component>

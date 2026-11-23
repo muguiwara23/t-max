@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pantalla única del POC: menú de pruebas, lista de canales, reproductor y resultados. -->
+<component name="MainScene" extends="Scene">
+  <children>
+    <Rectangle id="bg" width="1920" height="1080" color="0x0A0B0DFF" />
+    <Label id="title" translation="[96,60]" text="T-Max · prueba en Roku" color="0xF4F5F7FF">
+      <Font role="font" uri="font:BoldSystemFontFile" size="44" />
+    </Label>
+    <Label id="device" translation="[96,124]" width="1700" color="0xA4AAB4FF">
+      <Font role="font" uri="font:SystemFontFile" size="24" />
+    </Label>
+    <LabelList id="menu" translation="[96,190]" itemSize="[640,64]" numRows="11"
+      color="0xF4F5F7FF" focusedColor="0x0A0B0DFF" focusBitmapBlendColor="0xD7F36AFF">
+      <Font role="font" uri="font:SystemFontFile" size="30" />
+      <Font role="focusedFont" uri="font:BoldSystemFontFile" size="30" />
+    </LabelList>
+    <LabelList id="list" translation="[96,190]" itemSize="[640,56]" numRows="14" visible="false"
+      color="0xF4F5F7FF" focusedColor="0x0A0B0DFF" focusBitmapBlendColor="0xD7F36AFF">
+      <Font role="font" uri="font:SystemFontFile" size="26" />
+      <Font role="focusedFont" uri="font:BoldSystemFontFile" size="26" />
+    </LabelList>
+    <Rectangle id="logBox" translation="[800,190]" width="1024" height="820" color="0x14161AFF" />
+    <Label id="log" translation="[828,210]" width="968" height="780" wrap="true" lineSpacing="6" color="0xA4AAB4FF">
+      <Font role="font" uri="font:SystemFontFile" size="22" />
+    </Label>
+    <Video id="video" width="1920" height="1080" visible="false" />
+    <Rectangle id="hud" translation="[48,48]" width="1824" height="120" color="0x121418E6" visible="false" />
+    <Label id="hudText" translation="[80,62]" width="1760" height="100" wrap="true" color="0xF4F5F7FF" visible="false">
+      <Font role="font" uri="font:SystemFontFile" size="26" />
+    </Label>
+    <PocTask id="task" />
+  </children>
+  <script type="text/brightscript" uri="MainScene.brs" />
+</component>
