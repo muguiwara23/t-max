@@ -6,6 +6,8 @@ import { redact } from '@tmax/core';
 
 import { resolvePlayback, type PlaybackTarget } from '../data/playback';
 import { subPropsFor } from '../data/prefs';
+import { logEvent } from '../data/diag';
+import { stalkerPlaying } from '../data/stalker-session';
 import { markInUse, unmarkInUse } from '../dvr/bus';
 import { fetchHttp } from '../platform/http';
 import type { ChannelItem } from '../data/queries';
@@ -34,9 +36,17 @@ interface Props {
   bare?: boolean;
   onFatal?: (msg: string) => void;
   onProgress?: (e: ProgressEvent) => void;
+  /** Antes de reconectar (la grabación debe cerrar su archivo: mpv lo reescribiría). */
+  onBeforeReconnect?: () => Promise<void>;
 }
 
-const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, onState, onStarted, muted, bare, onFatal, onProgress }, ref) {
+/** Reconexiones permitidas en la ventana antes de rendirse y mostrar el error. */
+const RECONNECT_MAX = 5;
+const RECONNECT_WINDOW_MS = 3 * 60_000;
+/** Si se queda cargando más que esto, se da por atorado y se reconecta. */
+const STALL_MS = 25_000;
+
+const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, onState, onStarted, muted, bare, onFatal, onProgress, onBeforeReconnect }, ref) {
   const mpv = useRef<ExpoMpvViewRef>(null);
   const [source, setSource] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +66,8 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
   }));
 
   const target = useRef<PlaybackTarget | null>(null);
-  const retried = useRef(false);
+  const attempts = useRef<number[]>([]);
+  const [reconnecting, setReconnecting] = useState(false);
   const loadSeq = useRef(0);
 
   const load = async (forceNewToken: boolean) => {
@@ -87,29 +98,64 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
       setSource(undefined);
       setTimeout(() => seq === loadSeq.current && setSource(t.url), 0);
     } catch (e) {
-      if (seq === loadSeq.current) setError(redact(e instanceof Error ? e.message : String(e)));
+      if (seq !== loadSeq.current) return;
+      const msg = redact(e instanceof Error ? e.message : String(e));
+      // El portal/servidor no respondió al pedir el enlace: reintentar con espera antes de rendirse.
+      if (await reconnect(`No se pudo pedir el enlace (${msg.slice(0, 80)})`)) return;
+      setReconnecting(false);
+      logEvent({ kind: 'error', source: channel.source_type, channel: channel.name, msg });
+      setError(msg);
     }
   };
 
   // Avisar qué conexión está en uso (el DVR no abre otra si el proveedor solo permite una).
   const token = useRef(Math.random().toString(36).slice(2));
   useEffect(() => {
-    retried.current = false;
+    attempts.current = [];
+    setReconnecting(false);
     load(false);
     if (channel && !bare) markInUse(token.current, channel.source_id, channel.key);
+    stalkerPlaying(token.current, channel?.source_type === 'stalker' ? channel.source_id : null);
     return () => {
       loadSeq.current++;
       unmarkInUse(token.current);
+      stalkerPlaying(token.current, null);
     };
   }, [channel?.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** Error del reproductor: en Stalker se reintenta una vez con token nuevo; si no, se explica qué pasó. */
+  /**
+   * Se cayó la señal (error, fin del flujo o atorado): reconectar con enlace nuevo, con espera creciente.
+   * En Stalker, del segundo intento en adelante se pide también sesión nueva al portal.
+   * Devuelve false si ya se agotaron los intentos.
+   */
+  const reconnect = async (why: string): Promise<boolean> => {
+    if (!channel) return false;
+    const now = Date.now();
+    attempts.current = attempts.current.filter((t) => now - t < RECONNECT_WINDOW_MS);
+    if (attempts.current.length >= RECONNECT_MAX) return false;
+    attempts.current.push(now);
+    const n = attempts.current.length;
+    logEvent({ kind: 'reconnect', source: channel.source_type, channel: channel.name, msg: `${why} → reconexión ${n}/${RECONNECT_MAX}` });
+    setReconnecting(true);
+    await onBeforeReconnect?.().catch(() => {});
+    const seq = loadSeq.current;
+    await new Promise((r) => setTimeout(r, Math.min(8000, 800 * 2 ** (n - 1))));
+    if (seq !== loadSeq.current) return true;
+    await load(channel.source_type === 'stalker' && n >= 2);
+    return true;
+  };
+
+  // Atorado cargando: reconectar.
+  useEffect(() => {
+    if (!channel || error || (state !== 'loading' && state !== 'buffering')) return;
+    const t = setTimeout(() => void reconnect(state === 'loading' ? 'No arrancó en 25 s' : 'Atorado cargando 25 s'), STALL_MS);
+    return () => clearTimeout(t);
+  }, [state, channel?.key, error]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Error del reproductor: primero se reconecta solo; si sigue fallando, se explica qué pasó. */
   const onPlayerError = async (raw: string) => {
-    if (channel?.source_type === 'stalker' && !retried.current) {
-      retried.current = true;
-      load(true);
-      return;
-    }
+    if (await reconnect(`Error de reproducción (${redact(raw).slice(0, 80)})`)) return;
+    setReconnecting(false);
     let detail = '';
     const t = target.current;
     if (t) {
@@ -123,6 +169,7 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
     const code = /-?\d+/.exec(raw)?.[0];
     const base = code === '-13' || /loading failed/i.test(raw) ? 'No se pudo abrir el canal.' : redact(raw);
     const msg = `${base}${detail}${code ? ` (mpv ${code})` : ''}`;
+    logEvent({ kind: 'error', source: channel?.source_type, channel: channel?.name, msg });
     setError(msg);
     onFatal?.(msg);
   };
@@ -138,10 +185,17 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
         onPlaybackStateChange={({ nativeEvent }) => {
           setState(nativeEvent.state);
           onState?.(nativeEvent.state);
+          if (nativeEvent.state === 'playing') setReconnecting(false);
           if (nativeEvent.state === 'playing' && !started.current.done) {
             started.current.done = true;
-            onStarted?.(Date.now() - started.current.at, started.current.format);
+            const ms = Date.now() - started.current.at;
+            logEvent({ kind: 'play', source: channel?.source_type, channel: channel?.name, msg: `Arrancó en ${ms} ms (${started.current.format})` });
+            onStarted?.(ms, started.current.format);
           }
+        }}
+        onEnd={({ nativeEvent }) => {
+          // En vivo no hay "fin": si el flujo termina es que el servidor lo cortó.
+          if (channel && (nativeEvent.reason === 'ended' || nativeEvent.reason === 'error')) void reconnect('El servidor cortó el flujo');
         }}
         onError={({ nativeEvent }) => {
           onPlayerError(nativeEvent.error);
@@ -150,7 +204,7 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
       {!bare && (error || (channel && state !== 'playing' && state !== 'paused')) && (
         <View style={styles.status} pointerEvents="none">
           <T kind="label" weight="semibold" color={error ? colors.danger : colors.textSecondary}>
-            {error ? error : state === 'buffering' ? 'Cargando…' : 'Conectando…'}
+            {error ? error : reconnecting ? 'Se cortó la señal · reconectando…' : state === 'buffering' ? 'Cargando…' : 'Conectando…'}
           </T>
         </View>
       )}

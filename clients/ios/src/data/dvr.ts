@@ -232,3 +232,17 @@ export async function recoverInterrupted(): Promise<void> {
   // Programadas que nunca arrancaron porque la app estuvo cerrada.
   await db.runAsync("UPDATE recordings SET status = 'missed', error = 'T-Max no estaba abierto a esa hora.' WHERE status = 'scheduled' AND end < ?", [Date.now()]);
 }
+
+/** Tras un corte de señal: lo grabado se guarda como una parte y el resto se graba como otra. */
+export async function continueRecording(r: Recording): Promise<void> {
+  if (r.end <= Date.now()) return;
+  const db = await getDb();
+  const part = /\(parte (\d+)\)$/.exec(r.title);
+  const n = part ? Number(part[1]) + 1 : 2;
+  const title = `${r.title.replace(/\s*\(parte \d+\)$/, '')} (parte ${n})`;
+  await db.runAsync(
+    `INSERT INTO recordings (id, channel_key, channel_name, source_id, title, start, end, kind, status, created)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'scheduled', 'scheduled', ?)`,
+    [newId(), r.channel_key, r.channel_name, r.source_id, title, Date.now(), r.end, Date.now()],
+  );
+}

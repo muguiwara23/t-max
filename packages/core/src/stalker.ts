@@ -13,6 +13,8 @@ export interface StalkerConfig {
   lang?: string;
   /** Ruta completa del API si el portal no usa las habituales. */
   apiUrlOverride?: string;
+  /** Aviso de eventos de sesión para el registro de diagnóstico de la app (sin datos sensibles). */
+  onEvent?: (e: 'handshake' | 'renewed' | 'watchdog-fail' | 'link-retry') => void;
 }
 
 export const MAG_USER_AGENT =
@@ -120,6 +122,7 @@ export class StalkerClient {
       // Sesión rechazada (401/403): un handshake nuevo y un solo reintento.
       if (!retried && e instanceof AppError && e.code === 'AUTH_INVALID') {
         this.resetToken();
+        this.cfg.onEvent?.('renewed');
         return this.call(params, true);
       }
       throw e;
@@ -165,6 +168,30 @@ export class StalkerClient {
     if (!token) throw new AppError('AUTH_INVALID', 'El portal no entregó un token (¿MAC no registrada?).');
     this.token = token;
     this.tokenAt = Date.now();
+    this.cfg.onEvent?.('handshake');
+  }
+
+  /**
+   * Señal de vida, como la que mandan los decodificadores MAG cada pocos minutos.
+   * Sin ella, muchos portales dan la sesión por muerta y cortan el canal "cada tanto".
+   */
+  async watchdog(playing: boolean): Promise<void> {
+    if (!this.token) return;
+    try {
+      await getJson(
+        this.http,
+        {
+          url: this.url({ type: 'watchdog', action: 'get_events', event_active_id: '0', init: '0', cur_play_type: playing ? '1' : '0' }),
+          headers: stalkerHeaders(this.cfg, this.token),
+          timeoutMs: 15000,
+        },
+        this.secrets,
+      );
+    } catch (e) {
+      this.cfg.onEvent?.('watchdog-fail');
+      // Sesión rechazada: la próxima llamada hará handshake.
+      if (e instanceof AppError && e.code === 'AUTH_INVALID') this.resetToken();
+    }
   }
 
   async profile(): Promise<Json> {
@@ -199,6 +226,7 @@ export class StalkerClient {
       if (!(e instanceof AppError) || (e.code !== 'AUTH_INVALID' && e.code !== 'HTTP_4XX')) throw e;
     }
     if (!url) {
+      this.cfg.onEvent?.('link-retry');
       this.resetToken();
       url = await attempt();
     }

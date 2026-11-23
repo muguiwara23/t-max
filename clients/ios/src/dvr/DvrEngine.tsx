@@ -5,7 +5,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useEffect, useRef, useState } from 'react';
 import { AppState, StyleSheet, View } from 'react-native';
 
-import { activeRecordings, recoverInterrupted, updateRecording, type Recording } from '../data/dvr';
+import { activeRecordings, continueRecording, recoverInterrupted, updateRecording, type Recording } from '../data/dvr';
 import { dvrTick } from '../data/dvr-model';
 import { getChannelByKey, type ChannelItem } from '../data/queries';
 import { listSources } from '../data/sources';
@@ -151,6 +151,12 @@ function RecorderSlot({ slot, register, onDone }: { slot: Slot; register: (stop:
       bare
       style={styles.hidden}
       onFatal={(msg) => void stop(msg)}
+      onBeforeReconnect={async () => {
+        // mpv reescribiría el archivo al reconectar: se cierra esta parte y el resto va en otra.
+        if (!file.current || finished.current) return;
+        await stop('Se cortó la señal; se guardó hasta aquí y el resto va en otra parte.');
+        await continueRecording(slot.rec);
+      }}
       onState={async (st) => {
         if (st !== 'playing' || file.current || finished.current) return;
         try {

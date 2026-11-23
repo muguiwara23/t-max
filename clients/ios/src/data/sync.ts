@@ -13,6 +13,7 @@ import {
 
 import { fetchHttp } from '../platform/http';
 import { replaceSourceContent, replaceVodContent } from './db';
+import { logEvent } from './diag';
 import { mapM3u, mapProgrammes, mapProviderLive, resolveEpgIds, type ChannelRow } from './mapping';
 import { getSecrets, recordRefresh, sourceSettings, type Source } from './sources';
 import { mapVod } from './vod-mapping';
@@ -173,6 +174,7 @@ export async function refreshSource(source: Source, progress: Progress = () => {
     progress(result === 'ok' ? 'Listo' : epgError ? 'Listo (sin guía)' : 'Listo (sin películas/series)');
   } catch (e) {
     const msg = redact(humanError(e), secretList);
+    logEvent({ kind: 'error', source: source.name, msg: `Actualizar: ${msg}` });
     await recordRefresh(source.id, { result: 'error', error: msg });
     throw new Error(msg);
   }

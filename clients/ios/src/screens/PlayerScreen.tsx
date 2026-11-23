@@ -116,14 +116,29 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
     return () => setPlayerRecorder(null);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Grabar en cuanto empiece a verse (viene de "Grabar" en TV en vivo).
+  // Grabar en cuanto empiece a verse (viene de "Grabar" en TV en vivo), o seguir tras un corte de señal.
   const autoStarted = useRef(false);
+  const resumeRec = useRef<{ until: number | null; title: string } | null>(null);
   useEffect(() => {
-    if (autoRecord && !autoStarted.current && state === 'playing') {
+    if (state !== 'playing') return;
+    if (autoRecord && !autoStarted.current) {
       autoStarted.current = true;
       void startRec({ until: autoRecord.until });
+    } else if (resumeRec.current) {
+      const r = resumeRec.current;
+      resumeRec.current = null;
+      if (!r.until || r.until + PAD_AFTER_MS > Date.now()) void startRec({ until: r.until, title: r.title });
     }
   }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Antes de reconectar: cerrar el archivo (mpv lo reescribiría) y seguir en otra parte al volver la señal. */
+  const beforeReconnect = async () => {
+    const r = recRef.current;
+    if (!r) return;
+    const title = progsRef.current.find((p) => p.start <= Date.now() && p.end > Date.now())?.title ?? channelRef.current.name;
+    resumeRec.current = { until: r.until, title: `${title} (continuación)` };
+    await stopRec('Se cortó la señal; se guardó hasta aquí y sigue en otra grabación.');
+  };
 
   // Segundero del indicador de grabación.
   const [, setTick] = useState(0);
@@ -156,6 +171,7 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
     poke();
     setStartMs(null);
     setTracks([]);
+    resumeRec.current = null;
     markWatched(channel.key).catch(() => {});
     programmesFor([channel], Date.now() - 3600000, Date.now() + 6 * 3600000).then((m) => { progsRef.current = m.get(channel.key) ?? []; setProgs(progsRef.current); }).catch(() => setProgs([]));
   }, [channel.key]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -244,6 +260,7 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
         onState={setState}
         onStarted={(ms, format) => setStartMs({ ms, format })}
         onProgress={onProgress}
+        onBeforeReconnect={beforeReconnect}
       />
       <Pressable style={StyleSheet.absoluteFill} onPress={() => (overlay ? (setOverlay(false), setPanel('none')) : poke())} />
 

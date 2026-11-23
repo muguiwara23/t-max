@@ -1,9 +1,10 @@
 // Ajustes: Fuentes (cada una con sus propios ajustes), Reproductor y subtítulos, Respaldo y Acerca de.
 import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
 
 import { getSetting, setSetting } from '../data/db';
 import { exportBackup, pickBackup, restoreBackup } from '../data/backup';
+import { clearLog, logAsText, readLog, type DiagEvent } from '../data/diag';
 import { invalidatePlaybackCache } from '../data/playback';
 import { getGlobalSubStyle, setGlobalSubStyle } from '../data/prefs';
 import { DEFAULT_SUB_STYLE, type SubStyle } from '../data/settings-model';
@@ -22,13 +23,14 @@ import { colors, font, radius } from '../theme';
 import { Button, Chip, Switch, T } from '../ui/kit';
 import { SourceSettingsModal, SubStyleEditor } from './SourceSettings';
 
-export const APP_VERSION = '0.4.1';
+export const APP_VERSION = '0.4.2';
 
-type Cat = 'sources' | 'player' | 'backup' | 'about';
+type Cat = 'sources' | 'player' | 'backup' | 'diag' | 'about';
 const CATS: { id: Cat | 'soon'; name: string }[] = [
   { id: 'sources', name: 'Fuentes' },
   { id: 'player', name: 'Reproductor y subtítulos' },
   { id: 'backup', name: 'Respaldo' },
+  { id: 'diag', name: 'Diagnóstico' },
   { id: 'soon', name: 'Apariencia' },
   { id: 'soon', name: 'Control parental' },
   { id: 'about', name: 'Acerca de' },
@@ -53,6 +55,10 @@ export default function SettingsScreen({ onDataChanged, startWithAdd }: { onData
   const [tuning, setTuning] = useState<Source | null>(null);
   const [subs, setSubs] = useState<SubStyle>(DEFAULT_SUB_STYLE);
   const [backupBusy, setBackupBusy] = useState<string | null>(null);
+  const [log, setLog] = useState<DiagEvent[]>([]);
+  useEffect(() => {
+    if (cat === 'diag') readLog().then(setLog).catch(() => setLog([]));
+  }, [cat]);
 
   const reload = () => listSources().then(setSources).catch(() => {});
   useEffect(() => {
@@ -229,6 +235,38 @@ export default function SettingsScreen({ onDataChanged, startWithAdd }: { onData
                 <Button icon="plus" label="Importar respaldo" busy={backupBusy === 'Importando…'} onPress={doImport} />
               </View>
               <T kind="caption" color={colors.textSecondary}>No incluye canales, guía ni catálogos: se vuelven a descargar solos al importar. Las grabaciones están en Fotos.</T>
+            </>
+          )}
+
+          {cat === 'diag' && (
+            <>
+              <T kind="title" weight="bold">Diagnóstico</T>
+              <T kind="label" color={colors.textSecondary}>
+                Lo que pasó al reproducir: arranques, cortes, reconexiones y sesiones de Stalker. Se guarda solo en este iPad, sin contraseñas ni MAC. Si algo falla "cada tanto", comparte este registro.
+              </T>
+              <T kind="caption" color={colors.textTertiary}>
+                {Platform.OS === 'ios' ? `${(Platform.constants as { interfaceIdiom?: string }).interfaceIdiom === 'pad' ? 'iPad' : 'iPhone'} · iOS ${Platform.Version}` : Platform.OS} · T-Max {APP_VERSION}
+              </T>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <Button icon="expand" label="Compartir registro" onPress={() => Share.share({ message: `T-Max ${APP_VERSION} · iOS ${Platform.Version}\n\n${logAsText(log)}` }).catch(() => {})} />
+                <Button icon="refresh" label="Actualizar" onPress={() => readLog().then(setLog)} />
+                <Button icon="trash" variant="danger" label="Borrar" onPress={() => clearLog().then(() => setLog([]))} />
+              </View>
+              {log.length === 0 && <T color={colors.textSecondary}>Sin eventos todavía.</T>}
+              {log.slice(0, 150).map((e, i) => (
+                <View key={i} style={{ flexDirection: 'row', gap: 10 }}>
+                  <T kind="caption" color={colors.textTertiary} style={{ width: 118, fontVariant: ['tabular-nums'] }}>
+                    {new Date(e.at).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </T>
+                  <T kind="caption" weight="bold" style={{ width: 70 }}
+                    color={e.kind === 'error' ? colors.danger : e.kind === 'reconnect' ? colors.warning : e.kind === 'stalker' ? colors.accent : colors.textSecondary}>
+                    {e.kind}
+                  </T>
+                  <T kind="caption" color={colors.textSecondary} style={{ flex: 1 }}>
+                    {[e.source, e.channel].filter(Boolean).join(' · ')}{e.source || e.channel ? ' — ' : ''}{e.msg}
+                  </T>
+                </View>
+              ))}
             </>
           )}
 

@@ -121,3 +121,31 @@ test('Stalker: sesión rechazada (401) o caducada → handshake nuevo', async ()
   }
   assert.equal(handshakes, 3);
 });
+
+test('Stalker: watchdog manda señal de vida con el token y no rompe si falla', async () => {
+  const events: string[] = [];
+  let calls = 0;
+  const http = fakeHttp((req) => {
+    const q = query(req.url);
+    if (q.action === 'handshake') return { body: { js: { token: 'TOKEN-W' } } };
+    if (q.action === 'get_profile') return { body: { js: {} } };
+    if (q.type === 'watchdog') {
+      calls++;
+      assert.equal(q.action, 'get_events');
+      assert.equal(q.cur_play_type, '1');
+      assert.equal(req.headers?.Authorization, 'Bearer TOKEN-W');
+      return calls === 1 ? { body: { js: { data: {} } } } : { status: 401, body: '' };
+    }
+    if (q.action === 'get_genres') return { body: fixtureJson('stalker/get_genres.json') };
+    return undefined;
+  });
+  const c = new StalkerClient(http, { ...cfg, onEvent: (e) => events.push(e) });
+  await c.watchdog(true); // sin token todavía: no hace nada
+  assert.equal(calls, 0);
+  await c.genres();
+  await c.watchdog(true);
+  await c.watchdog(true);
+  assert.equal(calls, 2);
+  assert.ok(events.includes('handshake'));
+  assert.ok(events.includes('watchdog-fail'));
+});
