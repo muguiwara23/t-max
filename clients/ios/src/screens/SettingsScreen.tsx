@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
 
 import { getSetting, setSetting } from '../data/db';
+import { deriveStalkerDeviceIds } from '@tmax/core';
+
 import { exportBackup, pickBackup, restoreBackup } from '../data/backup';
 import { clearLog, logAsText, readLog, type DiagEvent } from '../data/diag';
 import { invalidatePlaybackCache } from '../data/playback';
@@ -23,7 +25,7 @@ import { colors, font, radius } from '../theme';
 import { Button, Chip, Switch, T } from '../ui/kit';
 import { SourceSettingsModal, SubStyleEditor } from './SourceSettings';
 
-export const APP_VERSION = '0.4.3';
+export const APP_VERSION = '0.4.4';
 
 type Cat = 'sources' | 'player' | 'backup' | 'diag' | 'about';
 const CATS: { id: Cat | 'soon'; name: string }[] = [
@@ -327,6 +329,14 @@ function SourceForm({ visible, source, onClose, onSaved }: { visible: boolean; s
   const [m3uUrl, setM3uUrl] = useState('');
   const [epgUrl, setEpgUrl] = useState('');
   const [mac, setMac] = useState('');
+  const [adv, setAdv] = useState(false);
+  const [sn, setSn] = useState('');
+  const [dev1, setDev1] = useState('');
+  const [dev2, setDev2] = useState('');
+  const [sig, setSig] = useState('');
+  const [sig2, setSig2] = useState('');
+  const [pLogin, setPLogin] = useState('');
+  const [pPass, setPPass] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -342,6 +352,14 @@ function SourceForm({ visible, source, onClose, onSaved }: { visible: boolean; s
         setPassword(s.password ?? '');
         setM3uUrl(s.m3uUrl ?? '');
         setMac(s.mac ?? '');
+        setSn(s.serialNumber ?? '');
+        setDev1(s.deviceId1 ?? '');
+        setDev2(s.deviceId2 ?? '');
+        setSig(s.signature ?? '');
+        setSig2(s.signature2 ?? '');
+        setPLogin(s.portalLogin ?? '');
+        setPPass(s.portalPassword ?? '');
+        setAdv(!!(s.serialNumber || s.deviceId1 || s.portalLogin || s.signature));
       });
     } else {
       setType('xtream');
@@ -352,6 +370,8 @@ function SourceForm({ visible, source, onClose, onSaved }: { visible: boolean; s
       setM3uUrl('');
       setEpgUrl('');
       setMac('');
+      setAdv(false);
+      setSn(''); setDev1(''); setDev2(''); setSig(''); setSig2(''); setPLogin(''); setPPass('');
     }
   }, [visible, source]);
 
@@ -366,7 +386,22 @@ function SourceForm({ visible, source, onClose, onSaved }: { visible: boolean; s
       type,
       name: finalName,
       config: { ...(source?.config ?? {}), server: server.trim() || undefined, username: username.trim() || undefined, epgUrl: epgUrl.trim() || undefined },
-      secrets: { password: password || undefined, m3uUrl: m3uUrl.trim() || undefined, mac: mac.trim().toUpperCase() || undefined },
+      secrets: {
+        password: password || undefined,
+        m3uUrl: m3uUrl.trim() || undefined,
+        mac: mac.trim().toUpperCase() || undefined,
+        ...(type === 'stalker'
+          ? {
+              serialNumber: sn.trim() || undefined,
+              deviceId1: dev1.trim() || undefined,
+              deviceId2: dev2.trim() || undefined,
+              signature: sig.trim() || undefined,
+              signature2: sig2.trim() || undefined,
+              portalLogin: pLogin.trim() || undefined,
+              portalPassword: pPass || undefined,
+            }
+          : {}),
+      },
     });
     onSaved(id);
   };
@@ -401,6 +436,38 @@ function SourceForm({ visible, source, onClose, onSaved }: { visible: boolean; s
             <>
               <Field label="URL del portal" value={server} onChange={setServer} placeholder="http://portal/stalker_portal/c/" keyboard="url" />
               <Field label="MAC" value={mac} onChange={setMac} placeholder="00:1A:79:XX:XX:XX" />
+              <Pressable onPress={() => setAdv((v) => !v)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <T kind="label" weight="bold" color={colors.accent}>{adv ? '▾' : '▸'} Avanzado (solo si tu portal lo pide)</T>
+              </Pressable>
+              {adv && (
+                <ScrollView style={{ maxHeight: 300 }} contentContainerStyle={{ gap: 10 }}>
+                  <T kind="caption" color={colors.textSecondary}>
+                    Algunos portales atan la MAC a un aparato. Copia estos datos de tu decodificador MAG original (o de la app que ya usabas). Una vez que el portal los acepta, no los cambies.
+                  </T>
+                  <Field label="Número de serie (SN)" value={sn} onChange={setSn} />
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <View style={{ flex: 1 }}><Field label="Device ID 1" value={dev1} onChange={setDev1} /></View>
+                    <View style={{ flex: 1 }}><Field label="Device ID 2" value={dev2} onChange={setDev2} /></View>
+                  </View>
+                  <Button compact icon="refresh" label="Generar Device ID desde la MAC" style={{ alignSelf: 'flex-start' }}
+                    onPress={() => {
+                      const d = deriveStalkerDeviceIds(mac);
+                      if (!d) return setError('Escribe primero una MAC válida.');
+                      Alert.alert('Generar Device ID', 'Úsalo solo si tu portal nunca ha visto otros Device ID con esta MAC: el portal liga el primero que recibe y después rechaza cualquier otro.', [
+                        { text: 'Cancelar', style: 'cancel' },
+                        { text: 'Generar', onPress: () => { setDev1(d.deviceId1); setDev2(d.deviceId2); } },
+                      ]);
+                    }} />
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <View style={{ flex: 1 }}><Field label="Firma (signature)" value={sig} onChange={setSig} /></View>
+                    <View style={{ flex: 1 }}><Field label="Firma 2" value={sig2} onChange={setSig2} /></View>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <View style={{ flex: 1 }}><Field label="Usuario del portal" value={pLogin} onChange={setPLogin} /></View>
+                    <View style={{ flex: 1 }}><Field label="Contraseña del portal" value={pPass} onChange={setPPass} secure /></View>
+                  </View>
+                </ScrollView>
+              )}
             </>
           )}
           {type !== 'stalker' && (

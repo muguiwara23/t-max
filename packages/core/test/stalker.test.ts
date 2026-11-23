@@ -58,7 +58,7 @@ test('Stalker: handshake → token → canales → create_link', async () => {
   assert.equal(redact(link.url), 'http://stalker.example.test/play/live.php?mac=***&stream=101&extension=ts&play_token=***');
   assert.equal(http.calls.filter((r) => query(r.url).action === 'handshake').length, 1);
   assert.equal(link.headers['User-Agent'], expected.headers['User-Agent']);
-  assert.ok(link.headers.Cookie?.startsWith('mac=00%3A1A%3A79'));
+  assert.ok(link.headers.Cookie?.startsWith('mac=00:1A:79'));
 });
 
 test('Stalker: token invalidado → renueva el token y reintenta create_link una vez', async () => {
@@ -148,4 +148,87 @@ test('Stalker: watchdog manda señal de vida con el token y no rompe si falla', 
   assert.equal(calls, 2);
   assert.ok(events.includes('handshake'));
   assert.ok(events.includes('watchdog-fail'));
+});
+
+import { deriveStalkerDeviceIds, encodeStalkerCmd, sha1Hex } from '../src/index.ts';
+
+test('Stalker: cmd viaja como lo manda un MAG (sin doble codificación)', () => {
+  assert.equal(encodeStalkerCmd('ffmpeg http://localhost/ch/101_'), 'ffmpeg%20http://localhost/ch/101_');
+  assert.equal(encodeStalkerCmd('ffrt http://x.test/a%3Ab?c=1&d=2#e'), 'ffrt%20http://x.test/a%3Ab?c=1%26d=2%23e');
+  assert.equal(encodeStalkerCmd('canal ñ'), 'canal%20%C3%B1');
+});
+
+test('Stalker: device_id derivados de la MAC (solo para rellenar), MAC inválida = null', () => {
+  const d = deriveStalkerDeviceIds('00:1a:79:00:00:00')!;
+  assert.equal(d.deviceId1.length, 64);
+  assert.notEqual(d.deviceId1, d.deviceId2);
+  assert.equal(deriveStalkerDeviceIds('no-es-mac'), null);
+});
+
+test('Stalker: handshake con prehash, perfil MAG250 completo y watchdog del portal', async () => {
+  let profileQuery: Record<string, string> = {};
+  const http = fakeHttp((req) => {
+    const q = query(req.url);
+    if (q.action === 'handshake') {
+      assert.equal(q.prehash, sha1Hex('00:1A:79:00:00:00'));
+      return { body: { js: { token: 'T1', random: 'abc123' } } };
+    }
+    if (q.action === 'get_profile') {
+      profileQuery = q;
+      return { body: { js: { id: '1', status: 0, watchdog_timeout: 90 } } };
+    }
+    if (q.action === 'get_genres') return { body: fixtureJson('stalker/get_genres.json') };
+    return undefined;
+  });
+  const c = new StalkerClient(http, { ...cfg, serialNumber: 'SN0000TEST', deviceId1: 'DEV1', deviceId2: 'DEV2' });
+  await c.genres();
+  assert.equal(profileQuery.stb_type, 'MAG250');
+  assert.equal(profileQuery.sn, 'SN0000TEST');
+  assert.equal(profileQuery.device_id, 'DEV1');
+  assert.equal(profileQuery.device_id2, 'DEV2');
+  assert.equal(JSON.parse(profileQuery.metrics!).random, 'abc123');
+  assert.ok(profileQuery.ver!.includes('PORTAL version'));
+  assert.equal(c.watchdogSeconds, 90);
+  const h = http.calls.find((r) => query(r.url).action === 'get_genres')!.headers!;
+  assert.equal(h.SN, 'SN0000TEST');
+  assert.ok(h.Cookie!.includes('__cfduid='));
+});
+
+test('Stalker: portal que pide usuario (status 2) → do_auth → perfil otra vez', async () => {
+  let second = '';
+  const http = fakeHttp((req) => {
+    const q = query(req.url);
+    if (q.action === 'handshake') return { body: { js: { token: 'T1' } } };
+    if (q.action === 'get_profile') {
+      if (q.auth_second_step === '1') {
+        second = 'ok';
+        return { body: { js: { id: '1', status: 0 } } };
+      }
+      return { body: { js: { status: 2, msg: 'Login required' } } };
+    }
+    if (q.action === 'do_auth') {
+      assert.equal(q.login, 'demo_user');
+      return { body: { js: true } };
+    }
+    if (q.action === 'get_genres') return { body: fixtureJson('stalker/get_genres.json') };
+    return undefined;
+  });
+  const c = new StalkerClient(http, { ...cfg, login: 'demo_user', password: 'demo_pass' });
+  assert.equal((await c.genres()).length, 2);
+  assert.equal(second, 'ok');
+  // Sin usuario configurado: error claro, sin reintentos infinitos.
+  const c2 = new StalkerClient(http, cfg);
+  await assert.rejects(c2.genres(), (e: unknown) => e instanceof AppError && /usuario y contraseña/.test(e.message));
+});
+
+test('Stalker: bloqueo y conflicto de aparato con el texto del portal; "Authorization failed." en texto plano', async () => {
+  const blocked = fakeHttp((req) => {
+    const q = query(req.url);
+    if (q.action === 'handshake') return { body: { js: { token: 'T1' } } };
+    if (q.action === 'get_profile') return { body: { js: { status: 1, block_msg: 'Device ID mismatch.<br/> Call the provider.' } } };
+    return undefined;
+  });
+  await assert.rejects(new StalkerClient(blocked, cfg).genres(), (e: unknown) => e instanceof AppError && /otro aparato/.test(e.message));
+  const plain = fakeHttp((req) => (query(req.url).action === 'handshake' ? { body: 'Authorization failed.' } : undefined));
+  await assert.rejects(new StalkerClient(plain, cfg).genres(), (e: unknown) => e instanceof AppError && e.code === 'AUTH_INVALID');
 });

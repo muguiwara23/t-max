@@ -8,4 +8,5 @@ export * from './m3u.ts';
 export * from './xmltv.ts';
 export * from './xtream.ts';
 export * from './stalker.ts';
+export { sha1Hex, sha256Hex } from './hash.ts';
 export * from './epg-match.ts';

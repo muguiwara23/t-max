@@ -10,7 +10,9 @@ Lee esto antes de tocar el repositorio.
 
 ## Prohibido
 
-1. Código, recursos, textos, layouts, iconos o assets de aplicaciones de terceros (decompilados o no). Las funciones se implementan desde cero, a partir de descripciones de comportamiento.
+1. Código, recursos, textos, layouts, iconos o assets de apps **cerradas o decompiladas** (p. ej. TiviMate), y logos, nombres o marca de cualquier otra app (Nuvio, AerioTV, IPTVnator…).
+   - **Sí se permite** reutilizar código de proyectos de **código abierto** con licencia compatible con GPL-3.0 (MIT, BSD, Apache-2.0, LGPL, GPL-3.0; AGPL-3.0 solo en archivos marcados como tales). Condiciones: conservar su aviso de copyright, registrarlo en `AVISOS-DE-TERCEROS.md`, citar el origen en un comentario del archivo y en el mensaje del commit.
+   - Antes de reutilizar, verificar la licencia en el repositorio original (no fiarse de lo que diga un tercero).
 2. Credenciales, URLs con usuario/contraseña, MACs reales de portales, tokens o dominios reales de proveedores — en código, fixtures, logs, issues o commits. Usar dominios `*.test` / `*.invalid` y datos inventados.
 3. Backend propio, proxy, analítica, crash reporting remoto, Firebase/Supabase o similares.
 4. Eludir DRM o controles de acceso.

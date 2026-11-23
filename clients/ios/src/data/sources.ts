@@ -21,6 +21,14 @@ export interface SourceSecrets {
   m3uUrl?: string;
   epgUrlSecret?: string;
   mac?: string;
+  /** Stalker avanzado: identidad del decodificador y usuario del portal (solo si el portal lo pide). */
+  serialNumber?: string;
+  deviceId1?: string;
+  deviceId2?: string;
+  signature?: string;
+  signature2?: string;
+  portalLogin?: string;
+  portalPassword?: string;
 }
 
 export interface Source {

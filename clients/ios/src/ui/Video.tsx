@@ -7,6 +7,7 @@ import { redact } from '@tmax/core';
 import { resolvePlayback, type PlaybackTarget } from '../data/playback';
 import { subPropsFor } from '../data/prefs';
 import { logEvent } from '../data/diag';
+import { humanError } from '../data/sync';
 import { stalkerPlaying } from '../data/stalker-session';
 import { markInUse, unmarkInUse } from '../dvr/bus';
 import { fetchHttp } from '../platform/http';
@@ -103,7 +104,7 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
       setTimeout(() => seq === loadSeq.current && setSource(t.url), 0);
     } catch (e) {
       if (seq !== loadSeq.current) return;
-      const msg = redact(e instanceof Error ? e.message : String(e));
+      const msg = redact(humanError(e));
       // El portal/servidor no respondió al pedir el enlace: reintentar con espera antes de rendirse.
       if (await reconnect(`No se pudo pedir el enlace (${msg.slice(0, 80)})`)) return;
       setReconnecting(false);

@@ -34,6 +34,8 @@ const MESSAGES: Partial<Record<string, string>> = {
 
 export function humanError(e: unknown): string {
   if (e instanceof AppError) {
+    // Mensajes ya escritos para personas (p. ej. el texto del portal Stalker): se muestran tal cual.
+    if (e.detail && /^(El portal|Este portal)/.test(e.detail)) return e.detail;
     const base = MESSAGES[e.code] ?? e.code;
     return e.httpStatus ? `${base} (HTTP ${e.httpStatus})` : base;
   }
