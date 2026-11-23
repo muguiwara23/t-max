@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- T-Max en Roku: barra lateral, una sola lista (Grupos → canales → Atrás) y video a pantalla completa. -->
+<component name="MainScene" extends="Scene">
+  <children>
+    <Rectangle width="1920" height="1080" color="0x0A0B0DFF" />
+    <Rectangle translation="[48,48]" width="240" height="984" color="0x14161AFF" />
+    <Label translation="[80,76]" text="T-Max" color="0xD7F36AFF">
+      <Font role="font" uri="font:BoldSystemFontFile" size="40" />
+    </Label>
+    <LabelList id="rail" translation="[64,170]" itemSize="[208,72]" numRows="6"
+      color="0xA4AAB4FF" focusedColor="0x0A0B0DFF" focusBitmapBlendColor="0xD7F36AFF">
+      <Font role="font" uri="font:BoldSystemFontFile" size="28" />
+      <Font role="focusedFont" uri="font:BoldSystemFontFile" size="28" />
+    </LabelList>
+    <Label id="title" translation="[336,64]" width="1500" color="0xF4F5F7FF">
+      <Font role="font" uri="font:BoldSystemFontFile" size="46" />
+    </Label>
+    <Label id="subtitle" translation="[336,126]" width="1500" color="0xA4AAB4FF">
+      <Font role="font" uri="font:SystemFontFile" size="26" />
+    </Label>
+    <Rectangle translation="[320,180]" width="820" height="852" color="0x14161AFF" />
+    <LabelList id="list" translation="[336,196]" itemSize="[788,64]" numRows="12"
+      color="0xF4F5F7FF" focusedColor="0x0A0B0DFF" focusBitmapBlendColor="0xD7F36AFF">
+      <Font role="font" uri="font:SystemFontFile" size="28" />
+      <Font role="focusedFont" uri="font:BoldSystemFontFile" size="28" />
+    </LabelList>
+    <Rectangle translation="[1172,180]" width="700" height="852" color="0x14161AFF" />
+    <Label id="info" translation="[1204,212]" width="636" height="788" wrap="true" lineSpacing="8" color="0xA4AAB4FF">
+      <Font role="font" uri="font:SystemFontFile" size="26" />
+    </Label>
+    <Video id="video" width="1920" height="1080" visible="false" />
+    <Rectangle id="hud" translation="[48,48]" width="1824" height="128" color="0x121418E6" visible="false" />
+    <Label id="hudText" translation="[84,64]" width="1752" height="100" wrap="true" color="0xF4F5F7FF" visible="false">
+      <Font role="font" uri="font:BoldSystemFontFile" size="30" />
+    </Label>
+    <Timer id="watchdog" duration="110" repeat="true" />
+    <Timer id="hudTimer" duration="5" />
+  </children>
+  <script type="text/brightscript" uri="Common.brs" />
+  <script type="text/brightscript" uri="MainScene.brs" />
+</component>

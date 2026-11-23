@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Red y JSON fuera del hilo de dibujo: grupos, canales, enlace Stalker y señal de vida. -->
+<component name="WorkTask" extends="Task">
+  <interface>
+    <field id="request" type="assocarray" />
+    <field id="result" type="assocarray" />
+  </interface>
+  <script type="text/brightscript" uri="Common.brs" />
+  <script type="text/brightscript" uri="WorkTask.brs" />
+</component>
