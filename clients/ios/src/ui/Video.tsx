@@ -74,8 +74,12 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
     const seq = ++loadSeq.current;
     setError(null);
     if (!channel) {
+      // Quitar la fuente NO detiene a mpv (sigue sonando): hay que pararlo de forma explícita.
+      // Sin esto, al abrir pantalla completa la vista previa seguía sonando y el audio se oía doble.
       target.current = null;
+      setReconnecting(false);
       setSource(undefined);
+      await mpv.current?.stop().catch(() => {});
       return;
     }
     try {
@@ -154,6 +158,7 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
 
   /** Error del reproductor: primero se reconecta solo; si sigue fallando, se explica qué pasó. */
   const onPlayerError = async (raw: string) => {
+    if (!channel) return; // eventos tardíos de un video que ya se detuvo
     if (await reconnect(`Error de reproducción (${redact(raw).slice(0, 80)})`)) return;
     setReconnecting(false);
     let detail = '';
