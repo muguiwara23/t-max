@@ -25,7 +25,7 @@ import { colors, font, radius } from '../theme';
 import { Button, Chip, Switch, T } from '../ui/kit';
 import { SourceSettingsModal, SubStyleEditor } from './SourceSettings';
 
-export const APP_VERSION = '0.4.4';
+export const APP_VERSION = '0.4.5';
 
 type Cat = 'sources' | 'player' | 'backup' | 'diag' | 'about';
 const CATS: { id: Cat | 'soon'; name: string }[] = [
@@ -172,6 +172,10 @@ export default function SettingsScreen({ onDataChanged, startWithAdd }: { onData
             <>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <T kind="title" weight="bold" style={{ flex: 1 }}>Fuentes</T>
+                {sources.length > 1 && (
+                  <Button icon="refresh" label="Actualizar todas" busy={Object.keys(busy).length > 0} style={{ marginRight: 10 }}
+                    onPress={async () => { for (const x of sources.filter((y) => y.enabled)) await refresh(x); }} />
+                )}
                 <Button variant="primary" icon="plus" label="Agregar fuente" onPress={() => setEditing('new')} />
               </View>
               {sources.length === 0 && <T color={colors.textSecondary}>Todavía no hay fuentes. Agrega tu servidor Xtream, una lista M3U o un portal Stalker.</T>}
