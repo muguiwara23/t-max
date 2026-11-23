@@ -55,3 +55,19 @@ test('Tema = design/tokens.json', () => {
   assert.equal(colors.overlayPanel, t.color.overlay.panel.value);
   assert.equal(radius.lg, t.radius.lg);
 });
+
+import { moveItem, sortGroups } from '../src/data/mapping.ts';
+
+test('Grupos: orden por lista, por nombre y manual (nuevos al final)', () => {
+  const g = [
+    { name: 'Deportes', providerSort: 0, manualSort: 1 },
+    { name: 'cine', providerSort: 1, manualSort: 0 },
+    { name: 'Ánime', providerSort: 2, manualSort: null },
+    { name: 'Canal 10', providerSort: 3, manualSort: null },
+  ];
+  assert.deepEqual(sortGroups(g, 'provider').map((x) => x.name), ['Deportes', 'cine', 'Ánime', 'Canal 10']);
+  assert.deepEqual(sortGroups(g, 'name').map((x) => x.name), ['Ánime', 'Canal 10', 'cine', 'Deportes']);
+  assert.deepEqual(sortGroups(g, 'manual').map((x) => x.name), ['cine', 'Deportes', 'Ánime', 'Canal 10']);
+  assert.deepEqual(moveItem(['a', 'b', 'c'], 2, -1), ['a', 'c', 'b']);
+  assert.deepEqual(moveItem(['a', 'b', 'c'], 0, -1), ['a', 'b', 'c']);
+});

@@ -1,7 +1,8 @@
 // TV en vivo: una sola lista (Grupos → canales → Atrás), vista previa y guía por canales.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { FlatList, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { getSetting, setSetting } from '../data/db';
 import { hhmm, type ProgrammeRow } from '../data/mapping';
 import {
   ALL,
@@ -12,11 +13,14 @@ import {
   toggleFavorite,
   type ChannelItem,
   type GroupItem,
+  type SourceFilter,
 } from '../data/queries';
+import { listSources, type Source } from '../data/sources';
 import { colors, font, radius } from '../theme';
 import Icon from '../ui/Icon';
 import { Button, T } from '../ui/kit';
 import Video from '../ui/Video';
+import GroupsList from './GroupsList';
 import GuideView from './GuideView';
 
 interface Props {
@@ -40,7 +44,10 @@ function useClock(): number {
 export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, onOpenSettings }: Props) {
   const now = useClock();
   const [mode, setMode] = useState<'list' | 'guide'>('list');
-  const [groups, setGroups] = useState<{ pinned: GroupItem[]; groups: GroupItem[] }>({ pinned: [], groups: [] });
+  const [sources, setSources] = useState<Source[]>([]);
+  const [filter, setFilterState] = useState<SourceFilter>(null);
+  const [localVersion, setLocalVersion] = useState(0);
+  const [allGroup, setAllGroup] = useState<GroupItem | null>(null);
   const [group, setGroup] = useState<GroupItem | null>(null);
   const [channels, setChannels] = useState<ChannelItem[]>([]);
   const [query, setQuery] = useState('');
@@ -51,21 +58,38 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
   const [guideSel, setGuideSel] = useState<{ key: string; start: number } | null>(null);
 
   useEffect(() => {
-    listGroups().then(setGroups).catch(() => {});
+    (async () => {
+      const list = (await listSources()).filter((x) => x.enabled);
+      setSources(list);
+      const saved = await getSetting('liveSource');
+      // Con una sola fuente no hay pestañas: se trabaja directo sobre ella (así se pueden editar sus grupos).
+      if (list.length === 1) setFilterState(list[0]!.id);
+      else setFilterState(saved && list.some((x) => x.id === saved) ? saved : null);
+    })().catch(() => {});
   }, [dataVersion]);
 
   useEffect(() => {
+    listGroups(filter).then((g) => setAllGroup(g.all)).catch(() => {});
+  }, [filter, dataVersion, localVersion]);
+
+  const setFilter = (f: SourceFilter) => {
+    setFilterState(f);
+    setGroup(null);
+    setSetting('liveSource', f ?? '').catch(() => {});
+  };
+
+  useEffect(() => {
     if (!group) return;
-    channelsIn(group.id).then(setChannels).catch(() => setChannels([]));
-  }, [group, dataVersion]);
+    channelsIn(group.id, filter).then(setChannels).catch(() => setChannels([]));
+  }, [group, filter, dataVersion, localVersion]);
 
   useEffect(() => {
     const t = setTimeout(() => {
-      if (query.trim()) searchChannels(query).then(setResults).catch(() => setResults([]));
+      if (query.trim()) searchChannels(query, filter).then(setResults).catch(() => setResults([]));
       else setResults(null);
     }, 250);
     return () => clearTimeout(t);
-  }, [query]);
+  }, [query, filter]);
 
   const visible = results ?? (group ? channels : []);
   const guideChannels = results ?? (group ? channels : []);
@@ -91,7 +115,7 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
   );
 
   const sel = selected ? nowNext(selected.key) : { current: undefined, next: [] as ProgrammeRow[] };
-  const empty = groups.groups.length <= 1 && (groups.groups[0]?.count ?? 0) === 0;
+  const empty = sources.length === 0 || (filter === null && allGroup !== null && allGroup.count === 0);
 
   const openFull = (c: ChannelItem) => {
     const list = visible.length ? visible : [c];
@@ -103,7 +127,7 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
     if (!selected) return;
     await toggleFavorite(selected.key, !selected.favorite);
     setSelected({ ...selected, favorite: !selected.favorite });
-    listGroups().then(setGroups).catch(() => {});
+    setLocalVersion((v) => v + 1);
   };
 
   const guideSelected = useMemo(() => {
@@ -121,7 +145,7 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
           <Pressable onPress={() => setMode('list')} style={[styles.segBtn, mode === 'list' && styles.segOn]}>
             <T kind="label" weight="bold" color={mode === 'list' ? colors.text : colors.textSecondary}>Lista</T>
           </Pressable>
-          <Pressable onPress={() => { setMode('guide'); if (!group && !results) setGroup(groups.groups[0] ?? null); }} style={[styles.segBtn, mode === 'guide' && styles.segOn]}>
+          <Pressable onPress={() => { setMode('guide'); if (!group && !results && allGroup) setGroup(allGroup); }} style={[styles.segBtn, mode === 'guide' && styles.segOn]}>
             <T kind="label" weight="bold" color={mode === 'guide' ? colors.text : colors.textSecondary}>Guía</T>
           </Pressable>
         </View>
@@ -133,6 +157,15 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
         </View>
         <T kind="title" weight="semibold" style={{ fontVariant: ['tabular-nums'] }}>{hhmm(now)}</T>
       </View>
+
+      {sources.length > 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 4 }}>
+          <SourceTab label="Todas" active={filter === null} onPress={() => setFilter(null)} />
+          {sources.map((src) => (
+            <SourceTab key={src.id} label={src.name} kind={src.type} active={filter === src.id} onPress={() => setFilter(src.id)} />
+          ))}
+        </ScrollView>
+      )}
 
       {empty ? (
         <View style={[styles.panel, styles.center]}>
@@ -193,21 +226,7 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
                 <ChannelList channels={channels} selectedKey={selected?.key} nowNext={nowNext} onPick={setSelected} onLong={openFull} />
               </>
             ) : (
-              <FlatList
-                data={[{ id: '__h1', name: 'MIS LISTAS', count: -1 }, ...groups.pinned, { id: '__h2', name: 'GRUPOS', count: -1 }, ...groups.groups]}
-                keyExtractor={(g) => g.id}
-                renderItem={({ item }) =>
-                  item.count < 0 ? (
-                    <T kind="label" weight="semibold" color={colors.textSecondary} style={styles.sectionLabel}>{item.name}</T>
-                  ) : (
-                    <Pressable style={({ pressed }) => [styles.groupRow, pressed && { backgroundColor: colors.raised }]} onPress={() => setGroup(item)}>
-                      <T weight={item.special ? 'bold' : 'medium'} style={{ flex: 1 }} lines={1}>{item.name}</T>
-                      <T kind="label" color={colors.textSecondary}>{item.id === ALL || item.count ? item.count : ''}</T>
-                      <Icon name="chevron" size={18} color={colors.textTertiary} />
-                    </Pressable>
-                  )
-                }
-              />
+              <GroupsList filter={filter} dataVersion={dataVersion + localVersion} onOpen={setGroup} onChanged={() => setLocalVersion((v) => v + 1)} />
             )}
           </View>
 
@@ -272,6 +291,16 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
   );
 }
 
+function SourceTab({ label, kind, active, onPress }: { label: string; kind?: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="tab" accessibilityState={{ selected: active }}
+      style={[styles.tab, active && { backgroundColor: colors.accent }]}>
+      {kind ? <T kind="caption" weight="bold" color={active ? '#0A0B0DB3' : colors.textTertiary}>{kind.toUpperCase()}</T> : null}
+      <T kind="label" weight="bold" color={active ? colors.onAccent : colors.text}>{label}</T>
+    </Pressable>
+  );
+}
+
 function ChannelList({ channels, selectedKey, nowNext, onPick, onLong }: {
   channels: ChannelItem[];
   selectedKey?: string;
@@ -312,6 +341,7 @@ function ChannelList({ channels, selectedKey, nowNext, onPick, onLong }: {
 }
 
 const styles = StyleSheet.create({
+  tab: { height: 38, paddingHorizontal: 16, borderRadius: radius.pill, backgroundColor: colors.panel, flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 8 },
   header: { height: 56, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 4 },
   segment: { flexDirection: 'row', backgroundColor: colors.panel, borderRadius: radius.pill, padding: 4, gap: 4 },
   segBtn: { height: 32, paddingHorizontal: 14, borderRadius: radius.pill, justifyContent: 'center' },

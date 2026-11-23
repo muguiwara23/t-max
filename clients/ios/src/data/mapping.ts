@@ -177,3 +177,37 @@ export function hhmm(ms: number): string {
   const d = new Date(ms);
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
+
+// ---------- Orden de grupos ----------
+export type GroupSortMode = 'provider' | 'name' | 'manual';
+
+export interface SortableGroup {
+  name: string;
+  providerSort: number;
+  manualSort: number | null;
+}
+
+/** provider = orden de la lista/servidor; name = alfabético; manual = el del usuario (los nuevos van al final). */
+export function sortGroups<T extends SortableGroup>(groups: T[], mode: GroupSortMode): T[] {
+  const copy = [...groups];
+  if (mode === 'name') {
+    return copy.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base', numeric: true }));
+  }
+  if (mode === 'manual') {
+    return copy.sort((a, b) => {
+      const am = a.manualSort ?? Number.MAX_SAFE_INTEGER;
+      const bm = b.manualSort ?? Number.MAX_SAFE_INTEGER;
+      return am - bm || a.providerSort - b.providerSort;
+    });
+  }
+  return copy.sort((a, b) => a.providerSort - b.providerSort);
+}
+
+/** Mueve un elemento una posición arriba (-1) o abajo (+1). */
+export function moveItem<T>(list: T[], index: number, delta: -1 | 1): T[] {
+  const j = index + delta;
+  if (index < 0 || j < 0 || j >= list.length) return list;
+  const copy = [...list];
+  [copy[index], copy[j]] = [copy[j]!, copy[index]!];
+  return copy;
+}

@@ -122,6 +122,7 @@ export async function deleteSource(id: string): Promise<void> {
     await db.runAsync('DELETE FROM groups WHERE source_id = ?', [id]);
     await db.runAsync('DELETE FROM sources WHERE id = ?', [id]);
     await db.runAsync("DELETE FROM user_channels WHERE key LIKE ? ESCAPE '\\'", [id.replace(/[%_\\]/g, '\\$&') + ':%']);
+    await db.runAsync('DELETE FROM user_groups WHERE source_id = ?', [id]);
   });
   await SecureStore.deleteItemAsync(secretKey(id));
 }

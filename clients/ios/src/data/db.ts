@@ -25,6 +25,10 @@ const MIGRATIONS: string[] = [
    CREATE INDEX IF NOT EXISTS idx_prog ON programmes(source_id, epg_id, start);
    CREATE TABLE IF NOT EXISTS user_channels (
      key TEXT PRIMARY KEY NOT NULL, favorite INTEGER NOT NULL DEFAULT 0, fav_sort INTEGER, last_watched INTEGER);`,
+  // v2: preferencias de grupos del usuario. No se tocan al actualizar la fuente.
+  `CREATE TABLE IF NOT EXISTS user_groups (
+     source_id TEXT NOT NULL, source_group_id TEXT NOT NULL, hidden INTEGER NOT NULL DEFAULT 0, manual_sort INTEGER,
+     PRIMARY KEY (source_id, source_group_id));`,
 ];
 
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
@@ -94,5 +98,5 @@ export async function setSetting(key: string, value: string): Promise<void> {
 
 export async function wipeAll(): Promise<void> {
   const db = await getDb();
-  await db.execAsync('DELETE FROM programmes; DELETE FROM channels; DELETE FROM groups; DELETE FROM sources; DELETE FROM user_channels; DELETE FROM settings;');
+  await db.execAsync('DELETE FROM programmes; DELETE FROM channels; DELETE FROM groups; DELETE FROM sources; DELETE FROM user_channels; DELETE FROM user_groups; DELETE FROM settings;');
 }
