@@ -91,6 +91,8 @@ Funciones que se esperan de un reproductor IPTV completo, descritas en palabras 
 | Temporadas y episodios | v1 |
 | Continuar viendo e historial | v1 |
 
+Estado iPad (v0.3): películas, series, fichas, temporadas/episodios, "Continuar viendo" y favoritos con fuentes **Xtream**. Falta Stalker/M3U y probar en el iPad real.
+
 ## Mis programas
 
 | Función | Prioridad |

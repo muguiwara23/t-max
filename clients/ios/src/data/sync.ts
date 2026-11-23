@@ -11,9 +11,10 @@ import {
 } from '@tmax/core';
 
 import { fetchHttp } from '../platform/http';
-import { replaceSourceContent } from './db';
+import { replaceSourceContent, replaceVodContent } from './db';
 import { mapM3u, mapProgrammes, mapProviderLive, resolveEpgIds, type ChannelRow } from './mapping';
 import { getSecrets, recordRefresh, type Source } from './sources';
+import { mapVod } from './vod-mapping';
 import { stalkerFor } from './stalker-session';
 
 export type Progress = (msg: string) => void;
@@ -71,6 +72,7 @@ export async function refreshSource(source: Source, progress: Progress = () => {
     let channels: ChannelRow[];
     let epgUrl: string | null = null;
     let account: Source['account'] = null;
+    let xclient: XtreamClient | null = null;
 
     if (source.type === 'xtream') {
       const client = new XtreamClient(fetchHttp, {
@@ -85,6 +87,7 @@ export async function refreshSource(source: Source, progress: Progress = () => {
       const [cats, live] = await Promise.all([client.liveCategories(), client.liveStreams()]);
       ({ groups, channels } = mapProviderLive(source.id, cats, live));
       epgUrl = source.config.epgUrl || client.xmltvUrl();
+      xclient = client;
     } else if (source.type === 'm3u') {
       progress('Descargando la lista…');
       const text = await fetchText(secrets.m3uUrl ?? '', 120000);
@@ -124,15 +127,41 @@ export async function refreshSource(source: Source, progress: Progress = () => {
       }
     }
 
+    // Películas y series (solo Xtream por ahora). Si fallan, TV en vivo se guarda igual.
+    let vodCounts: { movies: number; series: number } | null = null;
+    let vodError: string | null = null;
+    if (xclient) {
+      try {
+        progress('Descargando películas y series…');
+        const c = xclient;
+        const [mc, mv, sc, sv] = await Promise.all([
+          c.vodCategories().catch(() => []),
+          c.vodStreams(),
+          c.seriesCategories().catch(() => []),
+          c.series(),
+        ]);
+        const vod = mapVod(source.id, mc, mv, sc, sv);
+        progress('Guardando películas y series…');
+        await replaceVodContent(source.id, vod.categories, vod.items);
+        vodCounts = { movies: mv.length, series: sv.length };
+      } catch (e) {
+        result = 'partial';
+        vodError = 'Películas/series: ' + redact(humanError(e), secretList);
+      }
+    }
+
     progress('Guardando en el iPad…');
     await replaceSourceContent(source.id, groups, channels, programmes);
     await recordRefresh(source.id, {
       result,
-      error: epgError,
+      error: [epgError, vodError].filter(Boolean).join(' · ') || null,
       account,
-      stats: { channels: channels.length, groups: groups.length, epgChannels, programmes: programmes?.length ?? 0 },
+      stats: {
+        channels: channels.length, groups: groups.length, epgChannels, programmes: programmes?.length ?? 0,
+        ...(vodCounts ?? {}),
+      },
     });
-    progress(result === 'ok' ? 'Listo' : 'Listo (sin guía)');
+    progress(result === 'ok' ? 'Listo' : epgError ? 'Listo (sin guía)' : 'Listo (sin películas/series)');
   } catch (e) {
     const msg = redact(humanError(e), secretList);
     await recordRefresh(source.id, { result: 'error', error: msg });

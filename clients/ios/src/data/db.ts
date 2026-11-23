@@ -2,6 +2,7 @@
 import * as SQLite from 'expo-sqlite';
 
 import type { ChannelRow, GroupRow, ProgrammeRow } from './mapping';
+import type { VodCategoryRow, VodItemRow } from './vod-mapping';
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
@@ -29,6 +30,22 @@ const MIGRATIONS: string[] = [
   `CREATE TABLE IF NOT EXISTS user_groups (
      source_id TEXT NOT NULL, source_group_id TEXT NOT NULL, hidden INTEGER NOT NULL DEFAULT 0, manual_sort INTEGER,
      PRIMARY KEY (source_id, source_group_id));`,
+  // v3: películas y series (catálogo de la fuente) + avance/favoritos del usuario (no se tocan al actualizar).
+  `CREATE TABLE IF NOT EXISTS vod_categories (
+     id TEXT PRIMARY KEY NOT NULL, source_id TEXT NOT NULL, kind TEXT NOT NULL, source_category_id TEXT NOT NULL,
+     name TEXT NOT NULL, sort INTEGER NOT NULL);
+   CREATE INDEX IF NOT EXISTS idx_vodcat_source ON vod_categories(source_id, kind, sort);
+   CREATE TABLE IF NOT EXISTS vod_items (
+     key TEXT PRIMARY KEY NOT NULL, source_id TEXT NOT NULL, kind TEXT NOT NULL, source_item_id TEXT NOT NULL,
+     category_id TEXT, title TEXT NOT NULL, poster TEXT, rating TEXT, year INTEGER, ext TEXT, sort INTEGER NOT NULL);
+   CREATE INDEX IF NOT EXISTS idx_vod_cat ON vod_items(category_id, sort);
+   CREATE INDEX IF NOT EXISTS idx_vod_source ON vod_items(source_id, kind, sort);
+   CREATE TABLE IF NOT EXISTS user_vod (
+     key TEXT PRIMARY KEY NOT NULL, kind TEXT NOT NULL, position REAL NOT NULL DEFAULT 0, duration REAL NOT NULL DEFAULT 0,
+     completed INTEGER NOT NULL DEFAULT 0, favorite INTEGER NOT NULL DEFAULT 0, updated INTEGER NOT NULL DEFAULT 0,
+     parent_key TEXT, title TEXT, subtitle TEXT, poster TEXT, extra TEXT);
+   CREATE INDEX IF NOT EXISTS idx_uvod_parent ON user_vod(parent_key);
+   CREATE INDEX IF NOT EXISTS idx_uvod_updated ON user_vod(updated);`,
 ];
 
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
@@ -85,6 +102,16 @@ export async function replaceSourceContent(
   });
 }
 
+export async function replaceVodContent(sourceId: string, categories: VodCategoryRow[], items: VodItemRow[]): Promise<void> {
+  const db = await getDb();
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('DELETE FROM vod_categories WHERE source_id = ?', [sourceId]);
+    await db.runAsync('DELETE FROM vod_items WHERE source_id = ?', [sourceId]);
+    await insertMany(db, 'vod_categories', ['id', 'source_id', 'kind', 'source_category_id', 'name', 'sort'], categories);
+    await insertMany(db, 'vod_items', ['key', 'source_id', 'kind', 'source_item_id', 'category_id', 'title', 'poster', 'rating', 'year', 'ext', 'sort'], items);
+  });
+}
+
 export async function getSetting(key: string): Promise<string | null> {
   const db = await getDb();
   const r = await db.getFirstAsync<{ value: string }>('SELECT value FROM settings WHERE key = ?', [key]);
@@ -98,5 +125,6 @@ export async function setSetting(key: string, value: string): Promise<void> {
 
 export async function wipeAll(): Promise<void> {
   const db = await getDb();
-  await db.execAsync('DELETE FROM programmes; DELETE FROM channels; DELETE FROM groups; DELETE FROM sources; DELETE FROM user_channels; DELETE FROM user_groups; DELETE FROM settings;');
+  await db.execAsync('DELETE FROM programmes; DELETE FROM channels; DELETE FROM groups; DELETE FROM sources; DELETE FROM user_channels; DELETE FROM user_groups; DELETE FROM settings; ' +
+      'DELETE FROM vod_categories; DELETE FROM vod_items; DELETE FROM user_vod;');
 }

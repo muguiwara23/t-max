@@ -30,7 +30,7 @@ export interface Source {
   lastRefresh: number | null;
   lastResult: 'ok' | 'partial' | 'error' | null;
   lastError: string | null;
-  stats: { channels: number; groups: number; epgChannels: number; programmes: number } | null;
+  stats: { channels: number; groups: number; epgChannels: number; programmes: number; movies?: number; series?: number } | null;
 }
 
 interface SourceRowDb {
@@ -123,6 +123,9 @@ export async function deleteSource(id: string): Promise<void> {
     await db.runAsync('DELETE FROM sources WHERE id = ?', [id]);
     await db.runAsync("DELETE FROM user_channels WHERE key LIKE ? ESCAPE '\\'", [id.replace(/[%_\\]/g, '\\$&') + ':%']);
     await db.runAsync('DELETE FROM user_groups WHERE source_id = ?', [id]);
+    await db.runAsync('DELETE FROM vod_categories WHERE source_id = ?', [id]);
+    await db.runAsync('DELETE FROM vod_items WHERE source_id = ?', [id]);
+    await db.runAsync("DELETE FROM user_vod WHERE key LIKE ? ESCAPE '\\'", [id.replace(/[%_\\]/g, '\\$&') + ':%']);
   });
   await SecureStore.deleteItemAsync(secretKey(id));
 }

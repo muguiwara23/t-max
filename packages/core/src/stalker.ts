@@ -84,6 +84,9 @@ export class StalkerClient {
   private readonly api: string;
   private token: string | null = null;
   private pending: Promise<void> | null = null;
+  private tokenAt = 0;
+  /** Los tokens de portal caducan: se renuevan pasado este tiempo aunque el portal no avise. */
+  static readonly TOKEN_TTL_MS = 20 * 60 * 1000;
 
   constructor(http: HttpClient, cfg: StalkerConfig) {
     this.http = http;
@@ -102,9 +105,25 @@ export class StalkerClient {
     return `${this.api}?${q}`;
   }
 
-  private async call(params: Record<string, string>): Promise<unknown> {
-    if (!this.token && params.action !== 'handshake') await this.ensureToken();
-    return getJson(this.http, { url: this.url(params), headers: stalkerHeaders(this.cfg, this.token ?? undefined), timeoutMs: 30000 }, this.secrets);
+  private tokenExpired(): boolean {
+    return !this.token || Date.now() - this.tokenAt > StalkerClient.TOKEN_TTL_MS;
+  }
+
+  private async call(params: Record<string, string>, retried = false): Promise<unknown> {
+    if (this.tokenExpired()) {
+      this.token = null;
+      await this.ensureToken();
+    }
+    try {
+      return await getJson(this.http, { url: this.url(params), headers: stalkerHeaders(this.cfg, this.token ?? undefined), timeoutMs: 30000 }, this.secrets);
+    } catch (e) {
+      // Sesión rechazada (401/403): un handshake nuevo y un solo reintento.
+      if (!retried && e instanceof AppError && e.code === 'AUTH_INVALID') {
+        this.resetToken();
+        return this.call(params, true);
+      }
+      throw e;
+    }
   }
 
   /** Olvida el token actual (p. ej. si otro proceso hizo handshake con la misma MAC). */
@@ -145,6 +164,7 @@ export class StalkerClient {
     const token = toStr(obj(js(res)).token);
     if (!token) throw new AppError('AUTH_INVALID', 'El portal no entregó un token (¿MAC no registrada?).');
     this.token = token;
+    this.tokenAt = Date.now();
   }
 
   async profile(): Promise<Json> {

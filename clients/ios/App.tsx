@@ -11,15 +11,16 @@ import { listSources } from './src/data/sources';
 import LiveScreen from './src/screens/LiveScreen';
 import PlayerScreen from './src/screens/PlayerScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import VodPlayerScreen from './src/screens/VodPlayerScreen';
+import VodScreen from './src/screens/VodScreen';
+import type { VodPlayRequest } from './src/data/vod';
 import { colors } from './src/theme';
 import type { IconName } from './src/ui/Icon';
 import Icon from './src/ui/Icon';
 import { T } from './src/ui/kit';
 import Rail, { type Section } from './src/ui/Rail';
 
-const SOON: Record<Exclude<Section, 'live' | 'settings'>, { title: string; icon: IconName; text: string }> = {
-  movies: { title: 'Películas', icon: 'movies', text: 'El catálogo, las fichas y "Continuar viendo" llegan en la versión 0.3.' },
-  series: { title: 'Series', icon: 'series', text: 'Temporadas, episodios y avance llegan en la versión 0.3.' },
+const SOON: Record<'my' | 'dvr', { title: string; icon: IconName; text: string }> = {
   my: { title: 'Mis programas', icon: 'bell', text: 'Guardar programas desde la guía y recibir avisos llega en la versión 0.4.' },
   dvr: { title: 'DVR', icon: 'dvr', text: 'Grabar en este iPad llega en la versión 0.4.' },
 };
@@ -31,6 +32,14 @@ export default function App() {
   const [dataVersion, setDataVersion] = useState(0);
   const [player, setPlayer] = useState<{ list: ChannelItem[]; index: number } | null>(null);
   const [firstRun, setFirstRun] = useState(false);
+  const [vodPlayer, setVodPlayer] = useState<VodPlayRequest | null>(null);
+  const [progressVersion, setProgressVersion] = useState(0);
+  // Películas y Series se montan la primera vez que se abren y luego conservan su estado.
+  const [visited, setVisited] = useState<{ movies: boolean; series: boolean }>({ movies: false, series: false });
+
+  useEffect(() => {
+    if ((section === 'movies' || section === 'series') && !visited[section]) setVisited((v) => ({ ...v, [section]: true }));
+  }, [section, visited]);
 
   useEffect(() => {
     (async () => {
@@ -69,8 +78,18 @@ export default function App() {
                 onOpenSettings={() => setSection('settings')}
               />
             </View>
+            {visited.movies && (
+              <View style={[styles.fill, section !== 'movies' && styles.hidden]}>
+                <VodScreen kind="movie" dataVersion={dataVersion} progressVersion={progressVersion} onPlay={setVodPlayer} onOpenSettings={() => setSection('settings')} />
+              </View>
+            )}
+            {visited.series && (
+              <View style={[styles.fill, section !== 'series' && styles.hidden]}>
+                <VodScreen kind="series" dataVersion={dataVersion} progressVersion={progressVersion} onPlay={setVodPlayer} onOpenSettings={() => setSection('settings')} />
+              </View>
+            )}
             {section === 'settings' && <SettingsScreen onDataChanged={bump} startWithAdd={firstRun} />}
-            {section !== 'live' && section !== 'settings' && (
+            {(section === 'my' || section === 'dvr') && (
               <View style={[styles.fill, styles.soon]}>
                 <Icon name={SOON[section].icon} size={44} color={colors.textTertiary} />
                 <T kind="display" weight="bold" style={{ marginTop: 12 }}>{SOON[section].title}</T>
@@ -80,6 +99,7 @@ export default function App() {
           </View>
         </View>
       </SafeAreaView>
+      {vodPlayer && <VodPlayerScreen request={vodPlayer} onClose={() => { setVodPlayer(null); setProgressVersion((v) => v + 1); }} />}
       {player && <PlayerScreen list={player.list} startIndex={player.index} onClose={() => { setPlayer(null); bump(); }} />}
     </SafeAreaProvider>
   );

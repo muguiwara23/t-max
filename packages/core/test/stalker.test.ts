@@ -87,3 +87,37 @@ test('Stalker: portal sin token = MAC no registrada', async () => {
   const c = new StalkerClient(fakeHttp(() => ({ body: { js: {} } })), cfg);
   await assert.rejects(c.genres(), (e: unknown) => e instanceof AppError && e.code === 'AUTH_INVALID');
 });
+
+test('Stalker: sesión rechazada (401) o caducada → handshake nuevo', async () => {
+  let handshakes = 0;
+  let rejectOnce = true;
+  const http = fakeHttp((req) => {
+    const q = query(req.url);
+    if (q.action === 'handshake') {
+      handshakes++;
+      return { body: { js: { token: `TOKEN-${handshakes}` } } };
+    }
+    if (q.action === 'get_profile') return { body: { js: {} } };
+    if (q.action === 'get_genres') {
+      if (rejectOnce) {
+        rejectOnce = false;
+        return { status: 401, body: '' };
+      }
+      assert.equal(req.headers?.Authorization, `Bearer TOKEN-${handshakes}`);
+      return { body: fixtureJson('stalker/get_genres.json') };
+    }
+    return undefined;
+  });
+  const c = new StalkerClient(http, cfg);
+  assert.equal((await c.genres()).length, 2);
+  assert.equal(handshakes, 2);
+  // Pasado el tiempo de vida del token, la siguiente petición hace handshake sola.
+  const realNow = Date.now;
+  Date.now = () => realNow() + StalkerClient.TOKEN_TTL_MS + 1000;
+  try {
+    await c.genres();
+  } finally {
+    Date.now = realNow;
+  }
+  assert.equal(handshakes, 3);
+});

@@ -12,6 +12,15 @@ App React Native (Expo SDK 57) con reproducción por **libmpv** (`expo-mpv` / MP
 - Reproductor a pantalla completa: canal anterior/siguiente, pausa, audio, subtítulos y lista de canales.
 - Ajustes → Reproductor: formato TS / M3U8 / automático. Acerca de: borrar todos los datos.
 
+## v0.3
+
+- **Películas y Series** (fuentes Xtream): el catálogo se descarga al actualizar la fuente y se guarda en el iPad.
+  - Pestañas por fuente, "Continuar viendo", categorías, Favoritos, cuadrícula de pósters y búsqueda.
+  - Ficha de película y de serie con datos del proveedor (se piden al abrirla). Temporadas, episodios y avance por episodio.
+- Reproductor de películas/episodios: barra de tiempo, –10 s / +30 s, audio, subtítulos, siguiente episodio; guarda dónde te quedaste (visto al 95 %).
+- Stalker: la sesión del portal se renueva cada 20 min o cuando el portal la rechaza.
+- Pendiente: películas/series de Stalker y M3U; metadatos TMDB opcionales (ADR-0009).
+
 ## Obtener el `.ipa`
 
 GitHub → Actions → **App iOS (T-Max)** → la ejecución verde más reciente → artefacto **T-Max-ipa-sin-firmar**. Firmar con Flarestore.

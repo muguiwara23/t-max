@@ -3,7 +3,7 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 export type IconName =
   | 'live' | 'movies' | 'series' | 'bell' | 'dvr' | 'settings' | 'search' | 'guide' | 'star' | 'starFilled'
   | 'play' | 'pause' | 'prev' | 'next' | 'back' | 'chevron' | 'chevronDown' | 'subtitles' | 'audio' | 'list'
-  | 'expand' | 'close' | 'plus' | 'refresh' | 'trash' | 'edit';
+  | 'expand' | 'close' | 'plus' | 'refresh' | 'trash' | 'edit' | 'replay' | 'forward' | 'check' | 'restart' | 'skipNext';
 
 interface Props {
   name: IconName;
@@ -42,6 +42,11 @@ export default function Icon({ name, size = 22, color = '#F4F5F7' }: Props) {
     case 'refresh': body = <><Path d="M3 12a9 9 0 1 0 3-6.7L3 8" {...s} /><Path d="M3 3v5h5" {...s} /></>; break;
     case 'trash': body = <Path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" {...s} />; break;
     case 'edit': body = <Path d="M4 20h4L19 9l-4-4L4 16v4z" {...s} />; break;
+    case 'replay': body = <><Path d="M4 12a8 8 0 1 0 2.4-5.7" {...s} /><Path d="M4 4v4h4" {...s} /></>; break;
+    case 'forward': body = <><Path d="M20 12a8 8 0 1 1-2.4-5.7" {...s} /><Path d="M20 4v4h-4" {...s} /></>; break;
+    case 'check': body = <Path d="m5 12 5 5 9-10" {...s} />; break;
+    case 'restart': body = <><Path d="M5 5v14" {...s} /><Path d="M19 6 10 12l9 6z" {...f} /></>; break;
+    case 'skipNext': body = <><Path d="M5 6l9 6-9 6z" {...f} /><Path d="M18 5v14" {...s} /></>; break;
   }
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
