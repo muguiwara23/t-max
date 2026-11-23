@@ -2,6 +2,7 @@
 import * as SecureStore from 'expo-secure-store';
 
 import { getDb, wipeAll } from './db';
+import { normalizeSourceSettings, type SourceSettings } from './settings-model';
 
 export type SourceType = 'xtream' | 'm3u' | 'stalker';
 
@@ -11,6 +12,8 @@ export interface SourceConfig {
   username?: string;
   epgUrl?: string;
   timezone?: string;
+  /** Ajustes propios de esta fuente (formato, User-Agent, guía, subtítulos…). */
+  settings?: SourceSettings;
 }
 
 export interface SourceSecrets {
@@ -96,6 +99,18 @@ export async function saveSource(input: { id?: string; type: SourceType; name: s
   }
   await SecureStore.setItemAsync(secretKey(id), JSON.stringify(input.secrets));
   return id;
+}
+
+export function sourceSettings(s: Source): SourceSettings {
+  return normalizeSourceSettings(s.config.settings);
+}
+
+export async function saveSourceSettings(id: string, settings: SourceSettings): Promise<void> {
+  const db = await getDb();
+  const r = await db.getFirstAsync<{ config: string }>('SELECT config FROM sources WHERE id = ?', [id]);
+  if (!r) return;
+  const config = { ...(JSON.parse(r.config || '{}') as SourceConfig), settings: normalizeSourceSettings(settings) };
+  await db.runAsync('UPDATE sources SET config = ? WHERE id = ?', [JSON.stringify(config), id]);
 }
 
 export async function setSourceEnabled(id: string, enabled: boolean): Promise<void> {

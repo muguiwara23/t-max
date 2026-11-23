@@ -201,3 +201,10 @@ export async function markWatched(key: string): Promise<void> {
     [key, Date.now()],
   );
 }
+
+/** Un canal por su clave estable (para avisos de Mis programas y grabaciones). */
+export async function getChannelByKey(key: string): Promise<ChannelItem | null> {
+  const db = await getDb();
+  const rows = fix(await db.getAllAsync(`SELECT ${CHANNEL_COLS} ${CHANNEL_FROM} WHERE c.key = ? LIMIT 1`, [key]));
+  return rows[0] ?? null;
+}

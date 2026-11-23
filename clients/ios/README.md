@@ -12,6 +12,15 @@ App React Native (Expo SDK 57) con reproducción por **libmpv** (`expo-mpv` / MP
 - Reproductor a pantalla completa: canal anterior/siguiente, pausa, audio, subtítulos y lista de canales.
 - Ajustes → Reproductor: formato TS / M3U8 / automático. Acerca de: borrar todos los datos.
 
+## v0.4
+
+- **Mis programas:** "Recordarme" desde la guía o "A continuación"; el iPad avisa un minuto antes y al tocar el aviso abre el canal.
+- **DVR:** grabar lo que estás viendo (botón en el reproductor) o programar desde la guía. Graba con mpv (`stream-record`) sin recodificar; MP4 pasa solo a **Fotos**, MKV se queda en la app. Solo con T-Max abierto (límite de iOS).
+- **Ajustes por fuente:** formato, User-Agent, corrección de hora de la guía, actualizar sola y estilo de subtítulos propio.
+- **Subtítulos:** estilo general (tamaño, color, fondo, altura, negritas).
+- **Respaldo:** exportar/importar todo a un archivo (incluye contraseñas en texto normal, por decisión del usuario).
+- Pendiente de probar en el iPad real: grabación MP4 → Fotos y grabación programada con reproductor oculto.
+
 ## v0.3
 
 - **Películas y Series** (fuentes Xtream): el catálogo se descarga al actualizar la fuente y se guarda en el iPad.

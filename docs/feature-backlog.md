@@ -95,6 +95,8 @@ Estado iPad (v0.3): películas, series, fichas, temporadas/episodios, "Continuar
 
 ## Mis programas
 
+Estado iPad (v0.4): guardar desde la guía, aviso local, lista y borrar. DVR y respaldo también implementados; pendientes de prueba en el iPad real.
+
 | Función | Prioridad |
 |---|---|
 | Guardar un programa desde la guía o desde "A continuación" | v1 |

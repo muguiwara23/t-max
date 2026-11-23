@@ -1,9 +1,12 @@
-// Ajustes: Fuentes (agregar/activar/actualizar/editar/borrar), Reproductor y Acerca de.
+// Ajustes: Fuentes (cada una con sus propios ajustes), Reproductor y subtítulos, Respaldo y Acerca de.
 import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { getSetting, setSetting } from '../data/db';
+import { exportBackup, pickBackup, restoreBackup } from '../data/backup';
 import { invalidatePlaybackCache } from '../data/playback';
+import { getGlobalSubStyle, setGlobalSubStyle } from '../data/prefs';
+import { DEFAULT_SUB_STYLE, type SubStyle } from '../data/settings-model';
 import {
   deleteSource,
   getSecrets,
@@ -17,16 +20,17 @@ import {
 import { refreshSource } from '../data/sync';
 import { colors, font, radius } from '../theme';
 import { Button, Chip, Switch, T } from '../ui/kit';
+import { SourceSettingsModal, SubStyleEditor } from './SourceSettings';
 
-type Cat = 'sources' | 'player' | 'about';
+export const APP_VERSION = '0.4.0';
+
+type Cat = 'sources' | 'player' | 'backup' | 'about';
 const CATS: { id: Cat | 'soon'; name: string }[] = [
   { id: 'sources', name: 'Fuentes' },
-  { id: 'soon', name: 'Guía EPG' },
-  { id: 'player', name: 'Reproductor' },
+  { id: 'player', name: 'Reproductor y subtítulos' },
+  { id: 'backup', name: 'Respaldo' },
   { id: 'soon', name: 'Apariencia' },
   { id: 'soon', name: 'Control parental' },
-  { id: 'soon', name: 'Mis programas y DVR' },
-  { id: 'soon', name: 'Respaldo' },
   { id: 'about', name: 'Acerca de' },
 ];
 
@@ -46,12 +50,65 @@ export default function SettingsScreen({ onDataChanged, startWithAdd }: { onData
   const [busy, setBusy] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<Source | 'new' | null>(startWithAdd ? 'new' : null);
   const [format, setFormat] = useState('auto');
+  const [tuning, setTuning] = useState<Source | null>(null);
+  const [subs, setSubs] = useState<SubStyle>(DEFAULT_SUB_STYLE);
+  const [backupBusy, setBackupBusy] = useState<string | null>(null);
 
   const reload = () => listSources().then(setSources).catch(() => {});
   useEffect(() => {
     reload();
     getSetting('format').then((v) => setFormat(v ?? 'auto')).catch(() => {});
+    getGlobalSubStyle().then(setSubs).catch(() => {});
   }, []);
+
+  const doExport = async () => {
+    setBackupBusy('Preparando…');
+    try {
+      await exportBackup(APP_VERSION);
+    } catch (e) {
+      Alert.alert('No se pudo exportar', e instanceof Error ? e.message : String(e));
+    } finally {
+      setBackupBusy(null);
+    }
+  };
+
+  const doImport = async () => {
+    try {
+      const b = await pickBackup();
+      if (!b) return;
+      Alert.alert(
+        'Importar respaldo',
+        `${b.app} · ${new Date(b.exportedAt).toLocaleString('es-MX')}\n${b.sources.length} fuentes.\n\nSe reemplazará todo lo de este iPad (las grabaciones ya hechas se conservan). Luego se actualizan las fuentes.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Importar',
+            style: 'destructive',
+            onPress: async () => {
+              setBackupBusy('Importando…');
+              try {
+                await restoreBackup(b);
+                invalidatePlaybackCache();
+                const list = await listSources();
+                setSources(list);
+                getSetting('format').then((v) => setFormat(v ?? 'auto')).catch(() => {});
+                getGlobalSubStyle().then(setSubs).catch(() => {});
+                onDataChanged();
+                setBackupBusy(null);
+                setCat('sources');
+                for (const s of list.filter((x) => x.enabled)) await refresh(s);
+              } catch (e) {
+                setBackupBusy(null);
+                Alert.alert('No se pudo importar', e instanceof Error ? e.message : String(e));
+              }
+            },
+          },
+        ],
+      );
+    } catch (e) {
+      Alert.alert('No se pudo leer el archivo', e instanceof Error ? e.message : String(e));
+    }
+  };
 
   const refresh = async (s: Source) => {
     setBusy((b) => ({ ...b, [s.id]: 'Iniciando…' }));
@@ -124,6 +181,7 @@ export default function SettingsScreen({ onDataChanged, startWithAdd }: { onData
                   </View>
                   <Switch label="Fuente activa" value={s.enabled} onChange={async (v) => { await setSourceEnabled(s.id, v); await reload(); onDataChanged(); }} />
                   <Button compact icon="refresh" label="Actualizar" busy={!!busy[s.id]} onPress={() => refresh(s)} />
+                  <Button compact icon="settings" onPress={() => setTuning(s)} />
                   <Button compact icon="edit" onPress={() => setEditing(s)} />
                   <Button compact icon="trash" variant="danger" onPress={() => remove(s)} />
                 </View>
@@ -143,16 +201,41 @@ export default function SettingsScreen({ onDataChanged, startWithAdd }: { onData
                   <T kind="caption" color={colors.textSecondary}>Automático usa TS si el servidor lo permite (arranca más rápido); si no, M3U8.</T>
                 </View>
                 {(['auto', 'ts', 'm3u8'] as const).map((f) => (
-                  <Chip key={f} label={f === 'auto' ? 'Auto' : f.toUpperCase()} active={format === f} onPress={async () => { setFormat(f); await setSetting('format', f); }} />
+                  <Chip key={f} label={f === 'auto' ? 'Auto' : f.toUpperCase()} active={format === f} onPress={async () => { setFormat(f); await setSetting('format', f); invalidatePlaybackCache(); }} />
                 ))}
               </View>
+              <T kind="caption" color={colors.textSecondary}>Cada fuente puede tener su propio formato en su botón de ajustes (⚙) en Fuentes.</T>
+              <T kind="title" weight="bold" style={{ marginTop: 8 }}>Subtítulos</T>
+              <View style={[styles.card, { flexDirection: 'column', alignItems: 'stretch' }]}>
+                <SubStyleEditor value={subs} onChange={(v) => { setSubs(v); setGlobalSubStyle(v).catch(() => {}); invalidatePlaybackCache(); }} />
+              </View>
+              <T kind="caption" color={colors.textSecondary}>Es el estilo general. Una fuente puede tener el suyo en su botón de ajustes (⚙). Se aplica al abrir el siguiente video.</T>
+            </>
+          )}
+
+          {cat === 'backup' && (
+            <>
+              <T kind="title" weight="bold">Respaldo</T>
+              <T color={colors.textSecondary}>
+                Guarda en un archivo todo lo que configuraste: fuentes, ajustes de cada fuente, grupos ocultos y su orden, favoritos, avance de películas y series, Mis programas, grabaciones programadas y estilo de subtítulos. Sirve para pasarlo a otro iPad o como copia de seguridad.
+              </T>
+              <View style={[styles.card, { borderColor: colors.warning, borderWidth: 1 }]}>
+                <T kind="label" color={colors.warning} style={{ flex: 1 }}>
+                  El archivo incluye tus contraseñas y MAC en texto normal. Guárdalo en un lugar privado y no lo compartas.
+                </T>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <Button variant="primary" icon="expand" label="Exportar respaldo" busy={backupBusy === 'Preparando…'} onPress={doExport} />
+                <Button icon="plus" label="Importar respaldo" busy={backupBusy === 'Importando…'} onPress={doImport} />
+              </View>
+              <T kind="caption" color={colors.textSecondary}>No incluye canales, guía ni catálogos: se vuelven a descargar solos al importar. Las grabaciones están en Fotos.</T>
             </>
           )}
 
           {cat === 'about' && (
             <>
               <T kind="title" weight="bold">Acerca de</T>
-              <T weight="bold">T-Max 0.3.1</T>
+              <T weight="bold">T-Max {APP_VERSION}</T>
               <T kind="label" color={colors.textSecondary}>Software libre · GPL-3.0 · github.com/muguiwara23/t-max</T>
               <T kind="label" color={colors.textSecondary}>
                 Todo corre en este iPad: sin cuentas, sin servidores de T-Max y sin telemetría. Reproducción con libmpv (MPVKit).
@@ -168,6 +251,7 @@ export default function SettingsScreen({ onDataChanged, startWithAdd }: { onData
         </ScrollView>
       </View>
 
+      <SourceSettingsModal source={tuning} onClose={() => setTuning(null)} onSaved={async () => { setTuning(null); await reload(); onDataChanged(); }} />
       <SourceForm
         visible={editing !== null}
         source={editing === 'new' ? null : editing}
@@ -243,7 +327,7 @@ function SourceForm({ visible, source, onClose, onSaved }: { visible: boolean; s
       id: source?.id,
       type,
       name: finalName,
-      config: { server: server.trim() || undefined, username: username.trim() || undefined, epgUrl: epgUrl.trim() || undefined },
+      config: { ...(source?.config ?? {}), server: server.trim() || undefined, username: username.trim() || undefined, epgUrl: epgUrl.trim() || undefined },
       secrets: { password: password || undefined, m3uUrl: m3uUrl.trim() || undefined, mac: mac.trim().toUpperCase() || undefined },
     });
     onSaved(id);

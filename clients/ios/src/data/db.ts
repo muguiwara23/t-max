@@ -46,6 +46,16 @@ const MIGRATIONS: string[] = [
      parent_key TEXT, title TEXT, subtitle TEXT, poster TEXT, extra TEXT);
    CREATE INDEX IF NOT EXISTS idx_uvod_parent ON user_vod(parent_key);
    CREATE INDEX IF NOT EXISTS idx_uvod_updated ON user_vod(updated);`,
+  // v4: Mis programas (avisos) y DVR (grabaciones en el iPad).
+  `CREATE TABLE IF NOT EXISTS reminders (
+     id TEXT PRIMARY KEY NOT NULL, channel_key TEXT NOT NULL, channel_name TEXT NOT NULL, source_id TEXT NOT NULL,
+     title TEXT NOT NULL, description TEXT, start INTEGER NOT NULL, end INTEGER NOT NULL, notif_id TEXT, created INTEGER NOT NULL);
+   CREATE UNIQUE INDEX IF NOT EXISTS idx_rem_prog ON reminders(channel_key, start);
+   CREATE TABLE IF NOT EXISTS recordings (
+     id TEXT PRIMARY KEY NOT NULL, channel_key TEXT NOT NULL, channel_name TEXT NOT NULL, source_id TEXT NOT NULL,
+     title TEXT NOT NULL, start INTEGER NOT NULL, end INTEGER NOT NULL, kind TEXT NOT NULL, status TEXT NOT NULL,
+     file TEXT, bytes INTEGER, error TEXT, in_photos INTEGER NOT NULL DEFAULT 0, notif_id TEXT, created INTEGER NOT NULL);
+   CREATE INDEX IF NOT EXISTS idx_rec_start ON recordings(status, start);`,
 ];
 
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
@@ -126,5 +136,5 @@ export async function setSetting(key: string, value: string): Promise<void> {
 export async function wipeAll(): Promise<void> {
   const db = await getDb();
   await db.execAsync('DELETE FROM programmes; DELETE FROM channels; DELETE FROM groups; DELETE FROM sources; DELETE FROM user_channels; DELETE FROM user_groups; DELETE FROM settings; ' +
-      'DELETE FROM vod_categories; DELETE FROM vod_items; DELETE FROM user_vod;');
+      'DELETE FROM vod_categories; DELETE FROM vod_items; DELETE FROM user_vod; DELETE FROM reminders; DELETE FROM recordings;');
 }

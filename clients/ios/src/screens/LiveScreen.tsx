@@ -1,6 +1,9 @@
 // TV en vivo: una sola lista (Grupos → canales → Atrás), vista previa y guía por canales.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, FlatList, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+
+import { scheduleRecording, scheduledKeys } from '../data/dvr';
+import { addReminder, reminderId, reminderKeys, removeReminder } from '../data/reminders';
 
 import { getSetting, setSetting } from '../data/db';
 import { hhmm, type ProgrammeRow } from '../data/mapping';
@@ -58,6 +61,38 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
   const [programmes, setProgrammes] = useState<Map<string, ProgrammeRow[]>>(new Map());
   const [guideStart, setGuideStart] = useState(() => Math.floor(Date.now() / HALF_HOUR) * HALF_HOUR - HALF_HOUR);
   const [guideSel, setGuideSel] = useState<{ key: string; start: number } | null>(null);
+
+  const [marks, setMarks] = useState<{ rem: Set<string>; rec: Set<string> }>({ rem: new Set(), rec: new Set() });
+  useEffect(() => {
+    Promise.all([reminderKeys(), scheduledKeys()]).then(([rem, rec]) => setMarks({ rem, rec })).catch(() => {});
+  }, [dataVersion, localVersion]);
+
+  /** Recordarme / Grabar para un programa (desde la guía o "A continuación"). */
+  const toggleReminder = async (c: ChannelItem, p: ProgrammeRow) => {
+    const id = reminderId(c.key, p.start);
+    if (marks.rem.has(id)) await removeReminder(id);
+    else {
+      const r = await addReminder(c, p);
+      if (!r.notified && p.start > Date.now())
+        Alert.alert('Guardado en Mis programas', 'No se pudo programar el aviso: permite las notificaciones de T-Max en Ajustes del iPad.');
+    }
+    setLocalVersion((v) => v + 1);
+  };
+  const recordProgramme = async (c: ChannelItem, p: ProgrammeRow) => {
+    const r = await scheduleRecording(c, p);
+    if (!r.ok) Alert.alert('No se programó', r.reason ?? '');
+    else Alert.alert('Grabación programada', `${p.title}\n\nDeja T-Max abierto a esa hora: iOS no permite grabar con la app cerrada. Al terminar se guarda en Fotos.`);
+    setLocalVersion((v) => v + 1);
+  };
+  const programmeActions = (c: ChannelItem, p: ProgrammeRow) => {
+    const remOn = marks.rem.has(reminderId(c.key, p.start));
+    const recOn = marks.rec.has(`${c.key}@${p.start}`);
+    Alert.alert(p.title, `${c.name} · ${hhmm(p.start)} – ${hhmm(p.end)}`, [
+      ...(p.start > Date.now() || remOn ? [{ text: remOn ? 'Quitar de Mis programas' : 'Recordarme', onPress: () => void toggleReminder(c, p) }] : []),
+      ...(p.end > Date.now() && !recOn ? [{ text: 'Grabar', onPress: () => void recordProgramme(c, p) }] : []),
+      { text: 'Cerrar', style: 'cancel' as const },
+    ]);
+  };
 
   useEffect(() => {
     if (!focus) return;
@@ -194,8 +229,17 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
                   <T kind="title" weight="bold" lines={2}>{guideSelected.p?.title ?? guideSelected.c.name}</T>
                   {guideSelected.p?.description ? <T kind="label" color={colors.textSecondary} lines={3}>{guideSelected.p.description}</T> : null}
                   <View style={{ flex: 1 }} />
-                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
                     <Button variant="primary" icon="play" label="Ver canal" onPress={() => openFull(guideSelected.c)} />
+                    {guideSelected.p && (guideSelected.p.start > now || marks.rem.has(reminderId(guideSelected.c.key, guideSelected.p.start))) && (
+                      <Button icon="bell" label={marks.rem.has(reminderId(guideSelected.c.key, guideSelected.p.start)) ? 'En Mis programas' : 'Recordarme'}
+                        onPress={() => void toggleReminder(guideSelected.c, guideSelected.p!)} />
+                    )}
+                    {guideSelected.p && guideSelected.p.end > now && (
+                      marks.rec.has(`${guideSelected.c.key}@${guideSelected.p.start}`)
+                        ? <Button icon="dvr" label="Grabación programada" disabled />
+                        : <Button icon="dvr" label="Grabar" onPress={() => void recordProgramme(guideSelected.c, guideSelected.p!)} />
+                    )}
                   </View>
                 </>
               ) : (
@@ -284,10 +328,14 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
                 <T kind="label" weight="semibold" color={colors.textSecondary} style={{ marginLeft: 4 }}>A CONTINUACIÓN</T>
                 <View style={{ flexDirection: 'row', gap: 12 }}>
                   {sel.next.map((p) => (
-                    <View key={p.start} style={[styles.panel, styles.nextCard]}>
-                      <T kind="label" color={colors.textSecondary}>{hhmm(p.start)} – {hhmm(p.end)}</T>
+                    <Pressable key={p.start} onPress={() => programmeActions(selected, p)} style={[styles.panel, styles.nextCard]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <T kind="label" color={colors.textSecondary} style={{ flex: 1 }}>{hhmm(p.start)} – {hhmm(p.end)}</T>
+                        {marks.rem.has(reminderId(selected.key, p.start)) ? <Icon name="bell" size={14} color={colors.accent} /> : null}
+                        {marks.rec.has(`${selected.key}@${p.start}`) ? <Icon name="dvr" size={14} color={colors.live} /> : null}
+                      </View>
                       <T weight="semibold" lines={2}>{p.title}</T>
-                    </View>
+                    </Pressable>
                   ))}
                 </View>
               </View>

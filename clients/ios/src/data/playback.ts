@@ -3,6 +3,7 @@ import { XtreamClient, chooseFormat, type FormatPreference } from '@tmax/core';
 
 import { fetchHttp } from '../platform/http';
 import { getSetting } from './db';
+import { invalidatePrefs, settingsFor } from './prefs';
 import type { ChannelItem } from './queries';
 import { getSecrets, listSources, type Source } from './sources';
 import { forgetStalker, stalkerFor } from './stalker-session';
@@ -23,6 +24,7 @@ async function sourceById(id: string): Promise<Source | undefined> {
 export function invalidatePlaybackCache(): void {
   sourceCache = null;
   forgetStalker();
+  invalidatePrefs();
 }
 
 export async function getFormatPref(): Promise<FormatPreference> {
@@ -31,9 +33,11 @@ export async function getFormatPref(): Promise<FormatPreference> {
 }
 
 export async function resolvePlayback(ch: ChannelItem, opts: { forceNewToken?: boolean } = {}): Promise<PlaybackTarget> {
+  const own = await settingsFor(ch.source_id);
+  const uaHeaders = own.userAgent ? { 'User-Agent': own.userAgent } : undefined;
   if (ch.source_type === 'm3u') {
     const url = ch.stream_url ?? '';
-    return { url, format: /\.m3u8(\?|$)/i.test(url) ? 'm3u8' : /\.ts(\?|$)/i.test(url) ? 'ts' : 'directo' };
+    return { url, format: /\.m3u8(\?|$)/i.test(url) ? 'm3u8' : /\.ts(\?|$)/i.test(url) ? 'ts' : 'directo', headers: uaHeaders };
   }
   const source = await sourceById(ch.source_id);
   if (!source) throw new Error('La fuente de este canal ya no existe.');
@@ -45,8 +49,10 @@ export async function resolvePlayback(ch: ChannelItem, opts: { forceNewToken?: b
       password: secrets.password ?? '',
     });
     // libmpv reproduce TS y HLS: el formato depende de la preferencia y de lo que permita el servidor.
-    const format = chooseFormat(await getFormatPref(), source.account, { ts: true, hls: true }) ?? 'ts';
-    return { url: client.liveUrl(ch.source_channel_id, format), format };
+    // Cada fuente puede tener su propio formato; si no, el general.
+    const pref = own.format && own.format !== 'global' ? own.format : await getFormatPref();
+    const format = chooseFormat(pref, source.account, { ts: true, hls: true }) ?? 'ts';
+    return { url: client.liveUrl(ch.source_channel_id, format), format, headers: uaHeaders };
   }
   const link = await stalkerFor(source, secrets).createLink(ch.cmd ?? '', { forceNewToken: opts.forceNewToken });
   return { url: link.url, format: /\.m3u8/i.test(link.url) ? 'm3u8' : 'ts', headers: link.headers };

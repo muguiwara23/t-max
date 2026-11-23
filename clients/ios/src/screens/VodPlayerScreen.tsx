@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { PanResponder, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { redact } from '@tmax/core';
 
+import { settingsFor, subPropsFor } from '../data/prefs';
 import { playUrl, saveProgress, userVodFor, type VodPlayItem, type VodPlayRequest } from '../data/vod';
 import { clock, resumeFrom } from '../data/vod-mapping';
 import { colors, radius } from '../theme';
@@ -101,6 +102,9 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
       if (!alive) return;
       const m = mpv.current;
       for (const [k, v] of VOD_MPV_OPTIONS) await m?.setPropertyString(k, v).catch(() => {});
+      for (const [k, v] of await subPropsFor(item.sourceId).catch(() => [])) await m?.setPropertyString(k, v).catch(() => {});
+      const ua = (await settingsFor(item.sourceId).catch(() => ({ userAgent: '' }))).userAgent;
+      if (ua) await m?.setPropertyString('user-agent', ua).catch(() => {});
       setStart(from);
       setUrl(u);
     })().catch((e) => alive && setError(redact(e instanceof Error ? e.message : String(e))));

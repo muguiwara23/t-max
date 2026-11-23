@@ -32,9 +32,10 @@ Ver ADR-0005. Antes de cada commit se revisa que no haya credenciales, dominios 
 
 ## Copias de seguridad
 
-- Archivo local versionado y cifrado (AES-256-GCM con una clave derivada de la contraseña del usuario, usando una librería auditada).
-- Por defecto, el respaldo excluye los secretos; el usuario puede incluirlos de forma explícita.
-- Nunca se envían a ningún servidor.
+- Archivo JSON local (`tmax-backup` v1) que el usuario guarda con la hoja de Compartir de iOS (Archivos, AirDrop…). Nunca se envía a ningún servidor.
+- **Decisión de Arturo (2026-11-22):** el respaldo incluye contraseñas y MAC **en texto normal** para poder pasarlo entre dispositivos sin pasos extra. La app lo advierte antes de exportar.
+- Cifrado opcional con contraseña del usuario (AES-256-GCM) queda en el backlog.
+- Nunca se suben respaldos reales al repositorio; los de prueba usan datos inventados.
 
 ## Control parental
 

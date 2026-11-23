@@ -2,28 +2,28 @@
 import { Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, useFonts } from '@expo-google-fonts/manrope';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, AppState, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { getDb } from './src/data/db';
-import type { ChannelItem } from './src/data/queries';
-import { listSources } from './src/data/sources';
+import { invalidatePlaybackCache } from './src/data/playback';
+import { getChannelByKey, type ChannelItem } from './src/data/queries';
+import { needsAutoRefresh } from './src/data/settings-model';
+import { listSources, sourceSettings } from './src/data/sources';
+import { refreshSource } from './src/data/sync';
+import type { VodPlayRequest } from './src/data/vod';
+import DvrEngine from './src/dvr/DvrEngine';
+import { onNotificationTap } from './src/platform/notify';
+import DvrScreen from './src/screens/DvrScreen';
 import LiveScreen from './src/screens/LiveScreen';
+import MyProgramsScreen from './src/screens/MyProgramsScreen';
 import PlayerScreen from './src/screens/PlayerScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import VodPlayerScreen from './src/screens/VodPlayerScreen';
 import VodScreen from './src/screens/VodScreen';
-import type { VodPlayRequest } from './src/data/vod';
 import { colors } from './src/theme';
-import type { IconName } from './src/ui/Icon';
-import Icon from './src/ui/Icon';
-import { T } from './src/ui/kit';
 import Rail, { type Section } from './src/ui/Rail';
 
-const SOON: Record<'my' | 'dvr', { title: string; icon: IconName; text: string }> = {
-  my: { title: 'Mis programas', icon: 'bell', text: 'Guardar programas desde la guía y recibir avisos llega en la versión 0.4.' },
-  dvr: { title: 'DVR', icon: 'dvr', text: 'Grabar en este iPad llega en la versión 0.4.' },
-};
 
 export default function App() {
   const [fontsLoaded] = useFonts({ Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold });
@@ -35,6 +35,43 @@ export default function App() {
   const [vodPlayer, setVodPlayer] = useState<VodPlayRequest | null>(null);
   const [progressVersion, setProgressVersion] = useState(0);
   const [liveFocus, setLiveFocus] = useState<{ channel: ChannelItem; n: number } | null>(null);
+  const [dvrVersion, setDvrVersion] = useState(0);
+
+  // Fuentes con "Actualizar sola": al abrir T-Max o al volver a ella, si ya toca.
+  useEffect(() => {
+    if (!ready) return;
+    let running = false;
+    const run = async () => {
+      if (running) return;
+      running = true;
+      try {
+        const due = (await listSources()).filter((s) => s.enabled && needsAutoRefresh(sourceSettings(s), s.lastRefresh, Date.now()));
+        for (const s of due) await refreshSource(s).catch(() => {});
+        if (due.length) {
+          invalidatePlaybackCache();
+          setDataVersion((v) => v + 1);
+        }
+      } finally {
+        running = false;
+      }
+    };
+    run();
+    const sub = AppState.addEventListener('change', (st) => st === 'active' && void run());
+    return () => sub.remove();
+  }, [ready]);
+
+  // Tocar un aviso de Mis programas (o de una grabación) abre ese canal.
+  useEffect(() => {
+    if (!ready) return;
+    return onNotificationTap((d) => {
+      getChannelByKey(d.channelKey).then((c) => {
+        if (!c) return;
+        setVodPlayer(null);
+        setSection('live');
+        setPlayer({ list: [c], index: 0 });
+      }).catch(() => {});
+    });
+  }, [ready]);
   // Películas y Series se montan la primera vez que se abren y luego conservan su estado.
   const [visited, setVisited] = useState<{ movies: boolean; series: boolean }>({ movies: false, series: false });
 
@@ -91,16 +128,12 @@ export default function App() {
               </View>
             )}
             {section === 'settings' && <SettingsScreen onDataChanged={bump} startWithAdd={firstRun} />}
-            {(section === 'my' || section === 'dvr') && (
-              <View style={[styles.fill, styles.soon]}>
-                <Icon name={SOON[section].icon} size={44} color={colors.textTertiary} />
-                <T kind="display" weight="bold" style={{ marginTop: 12 }}>{SOON[section].title}</T>
-                <T color={colors.textSecondary} style={{ marginTop: 6, textAlign: 'center' }}>{SOON[section].text}</T>
-              </View>
-            )}
+            {section === 'my' && <MyProgramsScreen dataVersion={dataVersion + dvrVersion} onWatch={(c) => setPlayer({ list: [c], index: 0 })} />}
+            {section === 'dvr' && <DvrScreen dataVersion={dataVersion + dvrVersion} onPlay={setVodPlayer} />}
           </View>
         </View>
       </SafeAreaView>
+      <DvrEngine onChange={() => setDvrVersion((v) => v + 1)} />
       {vodPlayer && <VodPlayerScreen request={vodPlayer} onClose={() => { setVodPlayer(null); setProgressVersion((v) => v + 1); }} />}
       {player && <PlayerScreen list={player.list} startIndex={player.index} onClose={(last) => { setPlayer(null); setLiveFocus({ channel: last, n: Date.now() }); bump(); }} />}
     </SafeAreaProvider>
@@ -112,5 +145,4 @@ const styles = StyleSheet.create({
   shell: { flex: 1, flexDirection: 'row', gap: 12, padding: 16 },
   fill: { flex: 1 },
   hidden: { display: 'none' },
-  soon: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.panel, borderRadius: 20, padding: 32 },
 });

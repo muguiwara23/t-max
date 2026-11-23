@@ -2,8 +2,12 @@
 import type { PlaybackState, TrackInfo } from 'expo-mpv';
 import { useKeepAwake } from 'expo-keep-awake';
 import { StatusBar } from 'expo-status-bar';
+import type { File } from 'expo-file-system';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, AppState, FlatList, Pressable, StyleSheet, View } from 'react-native';
+
+import { createManualRecording } from '../data/dvr';
+import { startWriting, stopWriting, verifyOrFallback } from '../dvr/record';
 
 import { hhmm, type ProgrammeRow } from '../data/mapping';
 import { markWatched, programmesFor, type ChannelItem } from '../data/queries';
@@ -32,6 +36,49 @@ export default function PlayerScreen({ list, startIndex, onClose }: Props) {
   const [now, setNow] = useState(Date.now());
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const channel = list[index]!;
+  const [rec, setRec] = useState<{ id: string; file: File; at: number } | null>(null);
+  const recRef = useRef(rec);
+  recRef.current = rec;
+  const setProp = (n: string, v: string) => video.current?.setProp(n, v) ?? Promise.resolve();
+
+  const stopRec = useCallback(async (reason?: string) => {
+    const r = recRef.current;
+    if (!r) return;
+    recRef.current = null;
+    setRec(null);
+    await stopWriting(r.id, setProp, reason);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const startRec = async () => {
+    if (recRef.current) return;
+    try {
+      const title = progs.find((p) => p.start <= Date.now() && p.end > Date.now())?.title ?? channel.name;
+      const info = { channel_name: channel.name, title, start: Date.now() };
+      const file = await startWriting(setProp, info);
+      const id = await createManualRecording(channel, title, file);
+      setRec({ id, file, at: Date.now() });
+      setTimeout(async () => {
+        const r = recRef.current;
+        if (r && r.id === id) {
+          const f = await verifyOrFallback(id, r.file, setProp, info);
+          if (recRef.current?.id === id) setRec({ ...r, file: f });
+        }
+      }, 12000);
+    } catch (e) {
+      Alert.alert('No se pudo grabar', e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  // Al salir de la app, cambiar de canal o cerrar: la grabación se cierra bien y pasa a Fotos.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'background') void stopRec('Se detuvo porque T-Max pasó a segundo plano.');
+    });
+    return () => {
+      sub.remove();
+      void stopRec();
+    };
+  }, [stopRec]);
 
   const poke = useCallback(() => {
     setOverlay(true);
@@ -58,7 +105,10 @@ export default function PlayerScreen({ list, startIndex, onClose }: Props) {
     };
   }, []);
 
-  const go = (d: number) => setIndex((i) => (i + d + list.length) % list.length);
+  const go = (d: number) => {
+    if (recRef.current) void stopRec();
+    setIndex((i) => (i + d + list.length) % list.length);
+  };
   const cur = progs.find((p) => p.start <= now && p.end > now);
   const next = progs.find((p) => p.start >= (cur?.end ?? now));
   const pct = cur ? Math.min(100, ((now - cur.start) / (cur.end - cur.start)) * 100) : 0;
@@ -90,14 +140,20 @@ export default function PlayerScreen({ list, startIndex, onClose }: Props) {
           <View style={styles.topScrim} pointerEvents="none" />
           <View style={styles.bottomScrim} pointerEvents="none" />
           <View style={styles.top} pointerEvents="box-none">
-            <Pressable accessibilityLabel="Volver" onPress={() => onClose(channel)} style={styles.round}><Icon name="back" size={20} /></Pressable>
+            <Pressable accessibilityLabel="Volver" onPress={() => { void stopRec(); onClose(channel); }} style={styles.round}><Icon name="back" size={20} /></Pressable>
             <View style={{ flex: 1, marginLeft: 12 }}>
               <T kind="title" weight="bold" lines={1}>{channel.number ?? ''} · {channel.name}</T>
               <T kind="label" color={colors.textSecondary}>
                 {startMs ? `${startMs.format.toUpperCase()} · arranque ${startMs.ms} ms` : state === 'buffering' ? 'Cargando…' : ' '}
               </T>
             </View>
-            <View style={styles.pill}><View style={styles.liveDot} /><T kind="label" weight="bold">EN VIVO</T></View>
+            {rec ? (
+              <Pressable accessibilityLabel="Detener grabación" onPress={() => void stopRec()} style={[styles.pill, { backgroundColor: '#FF5A4E33' }]}>
+                <View style={styles.liveDot} /><T kind="label" weight="bold">GRABANDO · detener</T>
+              </Pressable>
+            ) : (
+              <View style={styles.pill}><View style={styles.liveDot} /><T kind="label" weight="bold">EN VIVO</T></View>
+            )}
             <View style={styles.pill}><T weight="semibold" style={{ fontVariant: ['tabular-nums'] }}>{hhmm(now)}</T></View>
           </View>
 
@@ -109,7 +165,7 @@ export default function PlayerScreen({ list, startIndex, onClose }: Props) {
                 initialScrollIndex={Math.max(0, index - 3)}
                 getItemLayout={(_d, i) => ({ length: 58, offset: 58 * i, index: i })}
                 renderItem={({ item, index: i }) => (
-                  <Pressable onPress={() => { setIndex(i); poke(); }} style={[styles.sideRow, i === index && { backgroundColor: '#FFFFFF1F' }]}>
+                  <Pressable onPress={() => { if (recRef.current && i !== index) void stopRec(); setIndex(i); poke(); }} style={[styles.sideRow, i === index && { backgroundColor: '#FFFFFF1F' }]}>
                     <T kind="label" color={colors.textSecondary} style={{ width: 34, textAlign: 'right' }}>{item.number ?? ''}</T>
                     <T weight={i === index ? 'bold' : 'medium'} lines={1} style={{ flex: 1 }}>{item.name}</T>
                   </Pressable>
@@ -161,6 +217,7 @@ export default function PlayerScreen({ list, startIndex, onClose }: Props) {
               <Ctl icon="next" label="Canal siguiente" big onPress={() => { go(1); poke(); }} />
               <View style={{ width: 16 }} />
               <Ctl icon="list" label="Lista de canales" onPress={() => { setPanel((p) => (p === 'channels' ? 'none' : 'channels')); poke(); }} />
+              <Ctl icon="dvr" label={rec ? 'Detener grabación' : 'Grabar'} active={!!rec} onPress={() => { rec ? void stopRec() : void startRec(); poke(); }} />
             </View>
           </View>
         </>
@@ -169,10 +226,10 @@ export default function PlayerScreen({ list, startIndex, onClose }: Props) {
   );
 }
 
-function Ctl({ icon, label, onPress, big }: { icon: 'subtitles' | 'audio' | 'prev' | 'next' | 'list'; label: string; onPress: () => void; big?: boolean }) {
+function Ctl({ icon, label, onPress, big, active }: { icon: 'subtitles' | 'audio' | 'prev' | 'next' | 'list' | 'dvr'; label: string; onPress: () => void; big?: boolean; active?: boolean }) {
   const s = big ? 60 : 52;
   return (
-    <Pressable accessibilityLabel={label} onPress={onPress} style={[styles.ctl, { width: s, height: s, borderRadius: s / 2 }]}>
+    <Pressable accessibilityLabel={label} onPress={onPress} style={[styles.ctl, { width: s, height: s, borderRadius: s / 2 }, active && { backgroundColor: colors.live }]}>
       <Icon name={icon} size={big ? 24 : 22} />
     </Pressable>
   );

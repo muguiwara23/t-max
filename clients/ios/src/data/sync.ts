@@ -7,13 +7,14 @@ import {
   XtreamClient,
   redact,
   type EpgChannel,
+  type HttpClient,
   type Programme,
 } from '@tmax/core';
 
 import { fetchHttp } from '../platform/http';
 import { replaceSourceContent, replaceVodContent } from './db';
 import { mapM3u, mapProgrammes, mapProviderLive, resolveEpgIds, type ChannelRow } from './mapping';
-import { getSecrets, recordRefresh, type Source } from './sources';
+import { getSecrets, recordRefresh, sourceSettings, type Source } from './sources';
 import { mapVod } from './vod-mapping';
 import { stalkerFor } from './stalker-session';
 
@@ -40,6 +41,12 @@ export function humanError(e: unknown): string {
 
 const HOUR = 3600 * 1000;
 
+/** Cliente HTTP que añade el User-Agent propio de la fuente (si tiene). */
+function withUserAgent(ua: string | undefined): HttpClient {
+  if (!ua) return fetchHttp;
+  return { get: (req) => fetchHttp.get({ ...req, headers: { 'User-Agent': ua, ...(req.headers ?? {}) } }) };
+}
+
 async function fetchText(url: string, timeoutMs: number, headers?: Record<string, string>): Promise<string> {
   const res = await fetchHttp.get({ url, timeoutMs, headers });
   if (res.status < 200 || res.status >= 300) {
@@ -48,12 +55,12 @@ async function fetchText(url: string, timeoutMs: number, headers?: Record<string
   return res.text();
 }
 
-async function loadEpg(url: string, progress: Progress): Promise<{ channels: EpgChannel[]; programmes: Programme[] }> {
+async function loadEpg(url: string, progress: Progress, opts: { ua?: string; offsetHours?: number } = {}): Promise<{ channels: EpgChannel[]; programmes: Programme[] }> {
   progress('Descargando la guía…');
-  const text = await fetchText(url, 180000);
+  const text = await fetchText(url, 180000, opts.ua ? { 'User-Agent': opts.ua } : undefined);
   progress('Procesando la guía…');
   const now = Date.now();
-  const p = new XmltvParser({ windowStartMs: now - 6 * HOUR, windowEndMs: now + 36 * HOUR });
+  const p = new XmltvParser({ windowStartMs: now - 6 * HOUR, windowEndMs: now + 36 * HOUR, offsetMinutes: Math.round((opts.offsetHours ?? 0) * 60) });
   // Por trozos para no bloquear la interfaz demasiado tiempo seguido.
   const CHUNK = 512 * 1024;
   for (let i = 0; i < text.length; i += CHUNK) {
@@ -67,6 +74,8 @@ async function loadEpg(url: string, progress: Progress): Promise<{ channels: Epg
 export async function refreshSource(source: Source, progress: Progress = () => {}): Promise<void> {
   const secrets = await getSecrets(source.id);
   const secretList = [secrets.password, secrets.mac, secrets.m3uUrl, source.config.username].filter((s): s is string => !!s);
+  const own = sourceSettings(source);
+  const http = withUserAgent(own.userAgent);
   try {
     let groups;
     let channels: ChannelRow[];
@@ -75,7 +84,7 @@ export async function refreshSource(source: Source, progress: Progress = () => {
     let xclient: XtreamClient | null = null;
 
     if (source.type === 'xtream') {
-      const client = new XtreamClient(fetchHttp, {
+      const client = new XtreamClient(http, {
         server: source.config.server ?? '',
         username: source.config.username ?? '',
         password: secrets.password ?? '',
@@ -90,7 +99,7 @@ export async function refreshSource(source: Source, progress: Progress = () => {
       xclient = client;
     } else if (source.type === 'm3u') {
       progress('Descargando la lista…');
-      const text = await fetchText(secrets.m3uUrl ?? '', 120000);
+      const text = await fetchText(secrets.m3uUrl ?? '', 120000, own.userAgent ? { 'User-Agent': own.userAgent } : undefined);
       progress('Procesando la lista…');
       const parser = new M3uParser();
       const CHUNK = 256 * 1024;
@@ -117,7 +126,7 @@ export async function refreshSource(source: Source, progress: Progress = () => {
     let epgError: string | null = null;
     if (epgUrl) {
       try {
-        const epg = await loadEpg(epgUrl, progress);
+        const epg = await loadEpg(epgUrl, progress, { ua: own.userAgent, offsetHours: own.epgOffsetHours });
         epgChannels = resolveEpgIds(channels, epg.channels);
         const wanted = new Set(channels.map((c) => c.epg_id).filter((x): x is string => !!x));
         programmes = mapProgrammes(source.id, epg.programmes, wanted);

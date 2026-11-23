@@ -3,7 +3,7 @@ import { XtreamClient, type SeriesDetail, type VodMovieDetail } from '@tmax/core
 
 import { fetchHttp } from '../platform/http';
 import { getDb } from './db';
-import { getSecrets, listSources, type Source } from './sources';
+import { getSecrets, listSources, sourceSettings, type Source } from './sources';
 import { isCompleted, type VodItemRow, type VodKind } from './vod-mapping';
 
 export const VOD_ALL = '__all';
@@ -207,7 +207,9 @@ async function clientFor(sourceId: string): Promise<XtreamClient> {
   const source = (await listSources()).find((s) => s.id === sourceId);
   if (!source || source.type !== 'xtream') throw new Error('La fuente de este título ya no existe.');
   const secrets = await getSecrets(source.id);
-  return new XtreamClient(fetchHttp, { server: source.config.server ?? '', username: source.config.username ?? '', password: secrets.password ?? '' });
+  const ua = sourceSettings(source).userAgent;
+  const http = ua ? { get: (req: Parameters<typeof fetchHttp.get>[0]) => fetchHttp.get({ ...req, headers: { 'User-Agent': ua, ...(req.headers ?? {}) } }) } : fetchHttp;
+  return new XtreamClient(http, { server: source.config.server ?? '', username: source.config.username ?? '', password: secrets.password ?? '' });
 }
 
 // Caché en memoria mientras la app está abierta: abrir la misma ficha dos veces no repite la petición.
@@ -251,6 +253,8 @@ export interface VodPlayItem {
   poster?: string | null;
   parentKey?: string | null;
   durationSec?: number | null;
+  /** Archivo en el iPad (grabaciones del DVR). */
+  localUrl?: string | null;
 }
 
 export interface VodPlayRequest {
@@ -261,6 +265,7 @@ export interface VodPlayRequest {
 }
 
 export function playUrl(it: VodPlayItem): Promise<string> {
+  if (it.localUrl) return Promise.resolve(it.localUrl);
   return it.kind === 'movie' ? movieUrl(it.sourceId, it.streamId, it.ext) : episodeUrl(it.sourceId, it.streamId, it.ext);
 }
 

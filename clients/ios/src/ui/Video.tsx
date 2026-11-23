@@ -5,6 +5,7 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { redact } from '@tmax/core';
 
 import { resolvePlayback, type PlaybackTarget } from '../data/playback';
+import { subPropsFor } from '../data/prefs';
 import { fetchHttp } from '../platform/http';
 import type { ChannelItem } from '../data/queries';
 import { colors } from '../theme';
@@ -16,6 +17,8 @@ export interface VideoHandle {
   tracks(): Promise<TrackInfo[]>;
   setAudio(id: number): void;
   setSubtitle(id: number | null): void;
+  /** Cambiar una propiedad de mpv (p. ej. stream-record para grabar). */
+  setProp(name: string, value: string): Promise<void>;
 }
 
 interface Props {
@@ -23,9 +26,14 @@ interface Props {
   style?: StyleProp<ViewStyle>;
   onState?: (s: PlaybackState) => void;
   onStarted?: (ms: number, format: string) => void;
+  /** Sin sonido (grabación en segundo plano). */
+  muted?: boolean;
+  /** Sin textos encima del video. */
+  bare?: boolean;
+  onFatal?: (msg: string) => void;
 }
 
-const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, onState, onStarted }, ref) {
+const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, onState, onStarted, muted, bare, onFatal }, ref) {
   const mpv = useRef<ExpoMpvViewRef>(null);
   const [source, setSource] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +46,9 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
     tracks: async () => (await mpv.current?.getTrackList()) ?? [],
     setAudio: (id) => void mpv.current?.setAudioTrack(id),
     setSubtitle: (id) => void (id === null ? mpv.current?.setPropertyString('sid', 'no') : mpv.current?.setSubtitleTrack(id)),
+    setProp: async (name, value) => {
+      await mpv.current?.setPropertyString(name, value);
+    },
   }));
 
   const target = useRef<PlaybackTarget | null>(null);
@@ -66,6 +77,7 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
         .join(',');
       await m?.setPropertyString('user-agent', ua).catch(() => {});
       await m?.setPropertyString('http-header-fields', extra).catch(() => {});
+      for (const [k, v] of await subPropsFor(channel.source_id).catch(() => [])) await m?.setPropertyString(k, v).catch(() => {});
       started.current = { at: Date.now(), done: false, format: t.format };
       // Forzar recarga aunque la URL sea igual a la anterior.
       setSource(undefined);
@@ -102,7 +114,9 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
     }
     const code = /-?\d+/.exec(raw)?.[0];
     const base = code === '-13' || /loading failed/i.test(raw) ? 'No se pudo abrir el canal.' : redact(raw);
-    setError(`${base}${detail}${code ? ` (mpv ${code})` : ''}`);
+    const msg = `${base}${detail}${code ? ` (mpv ${code})` : ''}`;
+    setError(msg);
+    onFatal?.(msg);
   };
 
   return (
@@ -111,6 +125,7 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
         ref={mpv}
         style={StyleSheet.absoluteFill}
         source={source}
+        muted={muted}
         onPlaybackStateChange={({ nativeEvent }) => {
           setState(nativeEvent.state);
           onState?.(nativeEvent.state);
@@ -123,7 +138,7 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
           onPlayerError(nativeEvent.error);
         }}
       />
-      {(error || (channel && state !== 'playing' && state !== 'paused')) && (
+      {!bare && (error || (channel && state !== 'playing' && state !== 'paused')) && (
         <View style={styles.status} pointerEvents="none">
           <T kind="label" weight="semibold" color={error ? colors.danger : colors.textSecondary}>
             {error ? error : state === 'buffering' ? 'Cargando…' : 'Conectando…'}

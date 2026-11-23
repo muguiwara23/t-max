@@ -2,7 +2,7 @@
   "expo": {
     "name": "T-Max",
     "slug": "t-max",
-    "version": "0.3.1",
+    "version": "0.4.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -11,13 +11,16 @@
       "supportsTablet": true,
       "requireFullScreen": false,
       "bundleIdentifier": "com.muguiwara23.tmax",
-      "buildNumber": "6",
+      "buildNumber": "7",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         },
-        "NSLocalNetworkUsageDescription": "T-Max se conecta a los servidores de tu red local que t\u00fa configures.",
-        "ITSAppUsesNonExemptEncryption": false
+        "NSLocalNetworkUsageDescription": "T-Max se conecta a los servidores de tu red local que tú configures.",
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "plugins": [
@@ -32,7 +35,23 @@
       ],
       "expo-secure-store",
       "expo-sqlite",
-      "expo-font"
+      "expo-font",
+      "expo-sharing",
+      "./plugins/without-push",
+      [
+        "expo-notifications",
+        {
+          "sounds": []
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "T-Max guarda tus grabaciones del DVR en la galería de Fotos.",
+          "savePhotosPermission": "T-Max guarda tus grabaciones del DVR en la galería de Fotos.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ]
     ]
   }
 }
