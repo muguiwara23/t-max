@@ -61,3 +61,8 @@ test('Info del video: calidad, audios y velocidad', () => {
   const chips = factChips({ width: 1920, height: 1080, fps: 59.94, videoCodec: 'h264', audio: [{ lang: 'spa', title: '', selected: true }, { lang: 'eng', title: '', selected: false }], rate: 1e6, buffered: 7.6 });
   assert.deepEqual(chips.map((c) => c.text), ['FHD · 1080p', 'H.264 · 60 fps', '2 audios · ES EN', '↓ 8.0 Mbps', 'búfer 8 s']);
 });
+
+test('Info del video: nombre de códec largo de mpv se acorta', () => {
+  assert.equal(factChips({ videoCodec: 'H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10', fps: 30 })[0]!.text, 'H.264 · 30 fps');
+  assert.equal(factChips({ videoCodec: 'H.265 / HEVC (High Efficiency Video Coding)' })[0]!.text, 'HEVC');
+});

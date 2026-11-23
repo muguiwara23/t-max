@@ -13,6 +13,7 @@ import { colors, radius } from '../theme';
 import Icon, { type IconName } from '../ui/Icon';
 import { Button, T } from '../ui/kit';
 import StreamInfo, { useStreamFacts } from '../ui/StreamInfo';
+import { useIsCompact } from '../ui/layout';
 
 interface Props {
   request: VodPlayRequest;
@@ -42,6 +43,7 @@ const VOD_MPV_OPTIONS: [string, string][] = [
 
 export default function VodPlayerScreen({ request, onClose }: Props) {
   useKeepAwake();
+  const compact = useIsCompact();
   const mpv = useRef<ExpoMpvViewRef>(null);
   const [index, setIndex] = useState(request.index);
   const [url, setUrl] = useState<string | undefined>(undefined);
@@ -266,7 +268,7 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
           </View>
 
           {(panel === 'audio' || panel === 'subs') && (
-            <View style={styles.tracks}>
+            <View style={[styles.tracks, compact && styles.tracksCompact]}>
               <T kind="label" weight="bold" color={colors.textSecondary} style={{ marginBottom: 6 }}>{panel === 'audio' ? 'AUDIO' : 'SUBTÍTULOS'}</T>
               {panel === 'subs' && (
                 <Pressable style={styles.trackRow} onPress={() => { mpv.current?.setPropertyString('sid', 'no'); setPanel('none'); }}>
@@ -282,7 +284,7 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
             </View>
           )}
 
-          <View style={styles.bottom}>
+          <View style={[styles.bottom, compact && styles.bottomCompact]}>
             <View style={styles.timeRow}>
               <T kind="label" weight="semibold" style={styles.time}>{clock(shown)}</T>
               <View
@@ -299,15 +301,15 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
               <T kind="label" weight="semibold" style={styles.time}>{dur > 0 ? `-${clock(dur - shown)}` : '--:--'}</T>
             </View>
             <View style={styles.controls}>
-              <Ctl icon="subtitles" label="Subtítulos" onPress={() => openTracks('subs')} />
-              <Ctl icon="audio" label="Audio" onPress={() => openTracks('audio')} />
+              <Ctl compact={compact} icon="subtitles" label="Subtítulos" onPress={() => openTracks('subs')} />
+              <Ctl compact={compact} icon="audio" label="Audio" onPress={() => openTracks('audio')} />
               <View style={{ width: 16 }} />
-              <Ctl icon="replay" label="Atrás 10 segundos" caption="10" big onPress={() => seekBy(-10)} />
-              <Pressable accessibilityLabel={state === 'paused' ? 'Reproducir' : 'Pausa'} style={styles.playBtn}
+              <Ctl compact={compact} icon="replay" label="Atrás 10 segundos" caption="10" big onPress={() => seekBy(-10)} />
+              <Pressable accessibilityLabel={state === 'paused' ? 'Reproducir' : 'Pausa'} style={[styles.playBtn, compact && styles.playBtnCompact]}
                 onPress={() => { state === 'paused' ? mpv.current?.play() : mpv.current?.pause(); poke(); }}>
                 <Icon name={state === 'paused' ? 'play' : 'pause'} size={28} color={colors.onAccent} />
               </Pressable>
-              <Ctl icon="forward" label="Adelante 30 segundos" caption="30" big onPress={() => seekBy(30)} />
+              <Ctl compact={compact} icon="forward" label="Adelante 30 segundos" caption="30" big onPress={() => seekBy(30)} />
               <View style={{ width: 16 }} />
               {next ? (
                 <Pressable accessibilityLabel="Siguiente episodio" onPress={goNext} style={styles.nextBtn}>
@@ -328,8 +330,8 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
   );
 }
 
-function Ctl({ icon, label, onPress, big, caption }: { icon: IconName; label: string; onPress: () => void; big?: boolean; caption?: string }) {
-  const s = big ? 60 : 52;
+function Ctl({ compact, icon, label, onPress, big, caption }: { compact?: boolean; icon: IconName; label: string; onPress: () => void; big?: boolean; caption?: string }) {
+  const s = compact ? (big ? 46 : 40) : big ? 60 : 52;
   return (
     <Pressable accessibilityLabel={label} onPress={onPress} style={[styles.ctl, { width: s, height: s, borderRadius: s / 2 }]}>
       <Icon name={icon} size={big ? 26 : 22} />
@@ -358,6 +360,10 @@ const styles = StyleSheet.create({
   controls: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 12 },
   ctl: { backgroundColor: '#FFFFFF14', alignItems: 'center', justifyContent: 'center' },
   ctlCaption: { position: 'absolute', bottom: 6, fontSize: 9, lineHeight: 10 },
+  sideCompact: { top: 8, bottom: 8, left: 8 },
+  tracksCompact: { top: 8, bottom: undefined, right: 8, maxHeight: '90%' },
+  playBtnCompact: { width: 56, height: 56, borderRadius: 28 },
+  bottomCompact: { paddingVertical: 10, paddingHorizontal: 16, gap: 8, left: 8, right: 8, bottom: 8 },
   playBtn: { width: 76, height: 76, borderRadius: 38, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   nextBtn: { height: 52, paddingHorizontal: 16, borderRadius: radius.pill, backgroundColor: '#FFFFFF14', flexDirection: 'row', alignItems: 'center', gap: 10 },
 });

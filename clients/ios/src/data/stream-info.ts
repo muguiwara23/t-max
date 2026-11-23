@@ -34,6 +34,18 @@ export function rateLabel(bytesPerSec?: number): string | null {
 
 const CODEC: Record<string, string> = { h264: 'H.264', hevc: 'HEVC', h265: 'HEVC', av1: 'AV1', vp9: 'VP9', mpeg2video: 'MPEG-2' };
 
+/** mpv da nombres largos ("H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10"): se reducen a uno corto. */
+function codecName(raw: string): string {
+  const k = raw.toLowerCase();
+  if (CODEC[k]) return CODEC[k]!;
+  if (/h\.?264|avc/.test(k)) return 'H.264';
+  if (/hevc|h\.?265/.test(k)) return 'HEVC';
+  if (/av1/.test(k)) return 'AV1';
+  if (/vp9/.test(k)) return 'VP9';
+  if (/mpeg-?2/.test(k)) return 'MPEG-2';
+  return raw.split('/')[0]!.trim().toUpperCase().slice(0, 12);
+}
+
 function langName(l: string): string {
   const k = l.toLowerCase();
   const m: Record<string, string> = { spa: 'ES', es: 'ES', esp: 'ES', eng: 'EN', en: 'EN', por: 'PT', pt: 'PT', fre: 'FR', fra: 'FR', fr: 'FR', ger: 'DE', deu: 'DE', de: 'DE', ita: 'IT', it: 'IT', jpn: 'JA', ja: 'JA', und: '' };
@@ -45,7 +57,7 @@ export function factChips(f: StreamFacts): { text: string; strong?: boolean }[] 
   const out: { text: string; strong?: boolean }[] = [];
   const q = qualityLabel(f.width, f.height);
   if (q) out.push({ text: f.height ? `${q} · ${f.height}p` : q, strong: true });
-  const codec = f.videoCodec ? CODEC[f.videoCodec.toLowerCase()] ?? f.videoCodec.toUpperCase() : null;
+  const codec = f.videoCodec ? codecName(f.videoCodec) : null;
   const fps = f.fps && f.fps > 0 ? `${Math.round(f.fps)} fps` : null;
   if (codec || fps) out.push({ text: [codec, fps].filter(Boolean).join(' · ') });
   if (f.isHdr) out.push({ text: f.hdrFormat === 'hlg' ? 'HLG' : 'HDR', strong: true });

@@ -12,6 +12,7 @@ import { addReminder } from '../data/reminders';
 import { releaseFromPlayer, setPlayerRecorder } from '../dvr/bus';
 import { startWriting, stopWriting, verifyOrFallback } from '../dvr/record';
 import StreamInfo, { useStreamFacts } from '../ui/StreamInfo';
+import { useIsCompact } from '../ui/layout';
 
 import { hhmm, type ProgrammeRow } from '../data/mapping';
 import { markWatched, programmesFor, type ChannelItem } from '../data/queries';
@@ -39,6 +40,7 @@ function mmss(ms: number): string {
 
 export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: Props) {
   useKeepAwake();
+  const compact = useIsCompact();
   const video = useRef<VideoHandle>(null);
   const [index, setIndex] = useState(startIndex);
   const [overlay, setOverlay] = useState(true);
@@ -287,7 +289,7 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
           </View>
 
           {panel === 'channels' && (
-            <View style={styles.side}>
+            <View style={[styles.side, compact && styles.sideCompact]}>
               <FlatList
                 data={list}
                 keyExtractor={(c) => c.key}
@@ -304,7 +306,7 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
           )}
 
           {(panel === 'audio' || panel === 'subs') && (
-            <View style={styles.tracks}>
+            <View style={[styles.tracks, compact && styles.tracksCompact]}>
               <T kind="label" weight="bold" color={colors.textSecondary} style={{ marginBottom: 6 }}>{panel === 'audio' ? 'AUDIO' : 'SUBTÍTULOS'}</T>
               {panel === 'subs' && (
                 <Pressable style={styles.trackRow} onPress={() => { video.current?.setSubtitle(null); setPanel('none'); }}>
@@ -320,7 +322,7 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
             </View>
           )}
 
-          <View style={styles.bottom}>
+          <View style={[styles.bottom, compact && styles.bottomCompact]}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 24 }}>
               <Pressable onPress={nowActions} style={{ flex: 1, gap: 4 }} accessibilityLabel="Opciones del programa actual">
                 <T kind="label" color={colors.textSecondary}>{cur ? `AHORA · ${hhmm(cur.start)} – ${hhmm(cur.end)}` : 'Sin información de guía'} · <T kind="label" weight="bold" color={colors.accent}>{rec ? 'grabando' : 'tocar para grabar'}</T></T>
@@ -335,18 +337,18 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
             </View>
             {cur && <View style={styles.bar}><View style={[styles.barFill, { width: `${pct}%` }]} /></View>}
             <View style={styles.controls}>
-              <Ctl icon="subtitles" label="Subtítulos" onPress={() => openTracks('subs')} />
-              <Ctl icon="audio" label="Audio" onPress={() => openTracks('audio')} />
+              <Ctl compact={compact} icon="subtitles" label="Subtítulos" onPress={() => openTracks('subs')} />
+              <Ctl compact={compact} icon="audio" label="Audio" onPress={() => openTracks('audio')} />
               <View style={{ width: 16 }} />
-              <Ctl icon="prev" label="Canal anterior" big onPress={() => { go(-1); poke(); }} />
-              <Pressable accessibilityLabel={state === 'paused' ? 'Reproducir' : 'Pausa'} style={styles.playBtn}
+              <Ctl compact={compact} icon="prev" label="Canal anterior" big onPress={() => { go(-1); poke(); }} />
+              <Pressable accessibilityLabel={state === 'paused' ? 'Reproducir' : 'Pausa'} style={[styles.playBtn, compact && styles.playBtnCompact]}
                 onPress={() => { state === 'paused' ? video.current?.play() : video.current?.pause(); poke(); }}>
                 <Icon name={state === 'paused' ? 'play' : 'pause'} size={28} color={colors.onAccent} />
               </Pressable>
-              <Ctl icon="next" label="Canal siguiente" big onPress={() => { go(1); poke(); }} />
+              <Ctl compact={compact} icon="next" label="Canal siguiente" big onPress={() => { go(1); poke(); }} />
               <View style={{ width: 16 }} />
-              <Ctl icon="list" label="Lista de canales" onPress={() => { setPanel((p) => (p === 'channels' ? 'none' : 'channels')); poke(); }} />
-              <Ctl icon="dvr" label={rec ? 'Detener grabación' : 'Grabar'} active={!!rec} onPress={() => { if (rec) void stopRec(); else nowActions(); poke(); }} />
+              <Ctl compact={compact} icon="list" label="Lista de canales" onPress={() => { setPanel((p) => (p === 'channels' ? 'none' : 'channels')); poke(); }} />
+              <Ctl compact={compact} icon="dvr" label={rec ? 'Detener grabación' : 'Grabar'} active={!!rec} onPress={() => { if (rec) void stopRec(); else nowActions(); poke(); }} />
             </View>
           </View>
         </>
@@ -355,8 +357,8 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
   );
 }
 
-function Ctl({ icon, label, onPress, big, active }: { icon: 'subtitles' | 'audio' | 'prev' | 'next' | 'list' | 'dvr'; label: string; onPress: () => void; big?: boolean; active?: boolean }) {
-  const s = big ? 60 : 52;
+function Ctl({ compact, icon, label, onPress, big, active }: { compact?: boolean; icon: 'subtitles' | 'audio' | 'prev' | 'next' | 'list' | 'dvr'; label: string; onPress: () => void; big?: boolean; active?: boolean }) {
+  const s = compact ? (big ? 46 : 40) : big ? 60 : 52;
   return (
     <Pressable accessibilityLabel={label} onPress={onPress} style={[styles.ctl, { width: s, height: s, borderRadius: s / 2 }, active && { backgroundColor: colors.live }]}>
       <Icon name={icon} size={big ? 24 : 22} />
@@ -381,5 +383,9 @@ const styles = StyleSheet.create({
   barFill: { height: 6, backgroundColor: colors.accent },
   controls: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 12 },
   ctl: { backgroundColor: '#FFFFFF14', alignItems: 'center', justifyContent: 'center' },
+  sideCompact: { top: 8, bottom: 8, left: 8 },
+  tracksCompact: { top: 8, bottom: undefined, right: 8, maxHeight: '90%' },
+  playBtnCompact: { width: 56, height: 56, borderRadius: 28 },
+  bottomCompact: { paddingVertical: 10, paddingHorizontal: 16, gap: 8, left: 8, right: 8, bottom: 8 },
   playBtn: { width: 76, height: 76, borderRadius: 38, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
 });
