@@ -152,7 +152,7 @@ export default function SettingsScreen({ onDataChanged, startWithAdd }: { onData
           {cat === 'about' && (
             <>
               <T kind="title" weight="bold">Acerca de</T>
-              <T weight="bold">T-Max 0.3.0</T>
+              <T weight="bold">T-Max 0.3.1</T>
               <T kind="label" color={colors.textSecondary}>Software libre · GPL-3.0 · github.com/muguiwara23/t-max</T>
               <T kind="label" color={colors.textSecondary}>
                 Todo corre en este iPad: sin cuentas, sin servidores de T-Max y sin telemetría. Reproducción con libmpv (MPVKit).

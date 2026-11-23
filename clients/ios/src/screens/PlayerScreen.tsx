@@ -15,7 +15,8 @@ import Video, { type VideoHandle } from '../ui/Video';
 interface Props {
   list: ChannelItem[];
   startIndex: number;
-  onClose: () => void;
+  /** Devuelve el canal que se estaba viendo al salir (puede no ser el inicial). */
+  onClose: (last: ChannelItem) => void;
 }
 
 export default function PlayerScreen({ list, startIndex, onClose }: Props) {
@@ -89,7 +90,7 @@ export default function PlayerScreen({ list, startIndex, onClose }: Props) {
           <View style={styles.topScrim} pointerEvents="none" />
           <View style={styles.bottomScrim} pointerEvents="none" />
           <View style={styles.top} pointerEvents="box-none">
-            <Pressable accessibilityLabel="Volver" onPress={onClose} style={styles.round}><Icon name="back" size={20} /></Pressable>
+            <Pressable accessibilityLabel="Volver" onPress={() => onClose(channel)} style={styles.round}><Icon name="back" size={20} /></Pressable>
             <View style={{ flex: 1, marginLeft: 12 }}>
               <T kind="title" weight="bold" lines={1}>{channel.number ?? ''} · {channel.name}</T>
               <T kind="label" color={colors.textSecondary}>

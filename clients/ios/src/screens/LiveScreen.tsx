@@ -28,6 +28,8 @@ interface Props {
   previewEnabled: boolean;
   onFullscreen: (list: ChannelItem[], index: number) => void;
   onOpenSettings: () => void;
+  /** Canal en el que quedó la pantalla completa: la vista previa sigue en ese. */
+  focus?: { channel: ChannelItem; n: number } | null;
 }
 
 const HALF_HOUR = 30 * 60000;
@@ -41,7 +43,7 @@ function useClock(): number {
   return now;
 }
 
-export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, onOpenSettings }: Props) {
+export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, onOpenSettings, focus }: Props) {
   const now = useClock();
   const [mode, setMode] = useState<'list' | 'guide'>('list');
   const [sources, setSources] = useState<Source[]>([]);
@@ -56,6 +58,12 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
   const [programmes, setProgrammes] = useState<Map<string, ProgrammeRow[]>>(new Map());
   const [guideStart, setGuideStart] = useState(() => Math.floor(Date.now() / HALF_HOUR) * HALF_HOUR - HALF_HOUR);
   const [guideSel, setGuideSel] = useState<{ key: string; start: number } | null>(null);
+
+  useEffect(() => {
+    if (!focus) return;
+    setSelected(focus.channel);
+    setGuideSel((g) => (g ? { key: focus.channel.key, start: -1 } : g));
+  }, [focus?.n]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     (async () => {

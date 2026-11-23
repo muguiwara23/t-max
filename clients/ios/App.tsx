@@ -34,6 +34,7 @@ export default function App() {
   const [firstRun, setFirstRun] = useState(false);
   const [vodPlayer, setVodPlayer] = useState<VodPlayRequest | null>(null);
   const [progressVersion, setProgressVersion] = useState(0);
+  const [liveFocus, setLiveFocus] = useState<{ channel: ChannelItem; n: number } | null>(null);
   // Películas y Series se montan la primera vez que se abren y luego conservan su estado.
   const [visited, setVisited] = useState<{ movies: boolean; series: boolean }>({ movies: false, series: false });
 
@@ -76,6 +77,7 @@ export default function App() {
                 previewEnabled={section === 'live' && !player}
                 onFullscreen={(list, index) => setPlayer({ list, index })}
                 onOpenSettings={() => setSection('settings')}
+                focus={liveFocus}
               />
             </View>
             {visited.movies && (
@@ -100,7 +102,7 @@ export default function App() {
         </View>
       </SafeAreaView>
       {vodPlayer && <VodPlayerScreen request={vodPlayer} onClose={() => { setVodPlayer(null); setProgressVersion((v) => v + 1); }} />}
-      {player && <PlayerScreen list={player.list} startIndex={player.index} onClose={() => { setPlayer(null); bump(); }} />}
+      {player && <PlayerScreen list={player.list} startIndex={player.index} onClose={(last) => { setPlayer(null); setLiveFocus({ channel: last, n: Date.now() }); bump(); }} />}
     </SafeAreaProvider>
   );
 }

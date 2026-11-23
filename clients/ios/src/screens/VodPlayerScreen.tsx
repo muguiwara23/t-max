@@ -19,6 +19,25 @@ interface Props {
 
 const SAVE_EVERY_MS = 10000;
 
+/**
+ * Ajustes de mpv para películas/series por HTTP:
+ * - hr-seek=no: saltar al cuadro clave más cercano (mucho más rápido que el salto exacto por red).
+ * - caché grande hacia adelante y algo hacia atrás: los saltos cortos caen dentro de lo ya descargado.
+ * - cache-pause-wait: cuando se vacía, juntar unos segundos antes de seguir (menos cortes seguidos).
+ * - reconnect: si el servidor corta la conexión, ffmpeg la reabre en el mismo punto.
+ */
+const VOD_MPV_OPTIONS: [string, string][] = [
+  ['network-timeout', '30'],
+  ['user-agent', 'libmpv'],
+  ['hr-seek', 'no'],
+  ['cache', 'yes'],
+  ['demuxer-max-bytes', '256MiB'],
+  ['demuxer-max-back-bytes', '64MiB'],
+  ['demuxer-readahead-secs', '300'],
+  ['cache-pause-wait', '4'],
+  ['stream-lavf-o', 'reconnect=1,reconnect_streamed=1,reconnect_on_network_error=1,reconnect_delay_max=5'],
+];
+
 export default function VodPlayerScreen({ request, onClose }: Props) {
   useKeepAwake();
   const mpv = useRef<ExpoMpvViewRef>(null);
@@ -28,6 +47,8 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
   const [state, setState] = useState<PlaybackState>('idle');
   const [pos, setPos] = useState(0);
   const [dur, setDur] = useState(0);
+  const [buffered, setBuffered] = useState(0);
+  const [bufPct, setBufPct] = useState(100);
   const [error, setError] = useState<string | null>(null);
   const [overlay, setOverlay] = useState(true);
   const [panel, setPanel] = useState<'none' | 'audio' | 'subs'>('none');
@@ -79,8 +100,7 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
       }
       if (!alive) return;
       const m = mpv.current;
-      await m?.setPropertyString('network-timeout', '30').catch(() => {});
-      await m?.setPropertyString('user-agent', 'libmpv').catch(() => {});
+      for (const [k, v] of VOD_MPV_OPTIONS) await m?.setPropertyString(k, v).catch(() => {});
       setStart(from);
       setUrl(u);
     })().catch((e) => alive && setError(redact(e instanceof Error ? e.message : String(e))));
@@ -184,6 +204,8 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
           live.current.pos = nativeEvent.position;
           if (nativeEvent.duration > 0) live.current.dur = nativeEvent.duration;
           setPos(nativeEvent.position);
+          setBuffered(nativeEvent.bufferedPosition || 0);
+          setBufPct(nativeEvent.bufferingPercent ?? 100);
           if (nativeEvent.duration > 0) setDur(nativeEvent.duration);
           if (Date.now() - live.current.lastSave > SAVE_EVERY_MS) void save();
         }}
@@ -206,7 +228,7 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
 
       {(busy || error) && (
         <View style={styles.center} pointerEvents="box-none">
-          <T weight="semibold" color={error ? colors.danger : colors.textSecondary}>{error ?? (state === 'buffering' ? 'Cargando…' : 'Conectando…')}</T>
+          <T weight="semibold" color={error ? colors.danger : colors.textSecondary}>{error ?? (state === 'buffering' ? `Cargando…${bufPct < 100 ? ` ${Math.round(bufPct)} %` : ''}` : 'Conectando…')}</T>
           {error && (
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
               <Button variant="primary" icon="refresh" label="Reintentar" onPress={() => setAttempt((a) => a + 1)} />
@@ -254,6 +276,7 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
                 {...pan.panHandlers}
               >
                 <View style={styles.bar} pointerEvents="none">
+                  {dur > 0 && buffered > 0 ? <View style={[styles.barBuf, { width: `${Math.min(100, (buffered / dur) * 100)}%` }]} /> : null}
                   <View style={[styles.barFill, { width: `${pct}%` }]} />
                 </View>
                 <View style={[styles.knob, { left: `${pct}%` }]} pointerEvents="none" />
@@ -314,7 +337,8 @@ const styles = StyleSheet.create({
   time: { width: 72, textAlign: 'center', fontVariant: ['tabular-nums'] },
   barHit: { flex: 1, height: 36, justifyContent: 'center' },
   bar: { height: 6, borderRadius: 3, backgroundColor: '#34394399', overflow: 'hidden' },
-  barFill: { height: 6, backgroundColor: colors.accent },
+  barFill: { position: 'absolute', left: 0, top: 0, height: 6, backgroundColor: colors.accent },
+  barBuf: { position: 'absolute', left: 0, top: 0, height: 6, backgroundColor: '#A4AAB466' },
   knob: { position: 'absolute', width: 18, height: 18, borderRadius: 9, marginLeft: -9, backgroundColor: colors.accent, top: 9 },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
   ctl: { backgroundColor: '#FFFFFF14', alignItems: 'center', justifyContent: 'center' },
