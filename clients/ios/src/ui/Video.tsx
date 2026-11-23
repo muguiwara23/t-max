@@ -1,11 +1,12 @@
 // Vista de video con libmpv: resuelve la URL del canal (directo contra la fuente) y la reproduce.
-import { ExpoMpvView, type ExpoMpvViewRef, type PlaybackState, type TrackInfo } from 'expo-mpv';
+import { ExpoMpvView, type ExpoMpvViewRef, type MediaInfo, type PlaybackState, type ProgressEvent, type TrackInfo } from 'expo-mpv';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { redact } from '@tmax/core';
 
 import { resolvePlayback, type PlaybackTarget } from '../data/playback';
 import { subPropsFor } from '../data/prefs';
+import { markInUse, unmarkInUse } from '../dvr/bus';
 import { fetchHttp } from '../platform/http';
 import type { ChannelItem } from '../data/queries';
 import { colors } from '../theme';
@@ -19,6 +20,7 @@ export interface VideoHandle {
   setSubtitle(id: number | null): void;
   /** Cambiar una propiedad de mpv (p. ej. stream-record para grabar). */
   setProp(name: string, value: string): Promise<void>;
+  media(): Promise<MediaInfo | null>;
 }
 
 interface Props {
@@ -31,9 +33,10 @@ interface Props {
   /** Sin textos encima del video. */
   bare?: boolean;
   onFatal?: (msg: string) => void;
+  onProgress?: (e: ProgressEvent) => void;
 }
 
-const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, onState, onStarted, muted, bare, onFatal }, ref) {
+const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, onState, onStarted, muted, bare, onFatal, onProgress }, ref) {
   const mpv = useRef<ExpoMpvViewRef>(null);
   const [source, setSource] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +52,7 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
     setProp: async (name, value) => {
       await mpv.current?.setPropertyString(name, value);
     },
+    media: async () => (await mpv.current?.getMediaInfo().catch(() => null)) ?? null,
   }));
 
   const target = useRef<PlaybackTarget | null>(null);
@@ -87,11 +91,15 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
     }
   };
 
+  // Avisar qué conexión está en uso (el DVR no abre otra si el proveedor solo permite una).
+  const token = useRef(Math.random().toString(36).slice(2));
   useEffect(() => {
     retried.current = false;
     load(false);
+    if (channel && !bare) markInUse(token.current, channel.source_id, channel.key);
     return () => {
       loadSeq.current++;
+      unmarkInUse(token.current);
     };
   }, [channel?.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -126,6 +134,7 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
         style={StyleSheet.absoluteFill}
         source={source}
         muted={muted}
+        onProgress={onProgress ? ({ nativeEvent }) => onProgress(nativeEvent) : undefined}
         onPlaybackStateChange={({ nativeEvent }) => {
           setState(nativeEvent.state);
           onState?.(nativeEvent.state);

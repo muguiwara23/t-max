@@ -8,7 +8,10 @@ import { AppState, StyleSheet, View } from 'react-native';
 import { activeRecordings, recoverInterrupted, updateRecording, type Recording } from '../data/dvr';
 import { dvrTick } from '../data/dvr-model';
 import { getChannelByKey, type ChannelItem } from '../data/queries';
+import { listSources } from '../data/sources';
+import { notifyNow } from '../platform/notify';
 import Video, { type VideoHandle } from '../ui/Video';
+import { offerToPlayer, ownedByPlayer, sourceInUse } from './bus';
 import { startWriting, stopWriting, verifyOrFallback } from './record';
 
 const MAX_PARALLEL = 2;
@@ -23,6 +26,7 @@ export default function DvrEngine({ onChange }: { onChange: () => void }) {
   const [slots, setSlots] = useState<Slot[]>([]);
   const stoppers = useRef(new Map<string, (reason?: string) => Promise<void>>());
   const busy = useRef(false);
+  const warned = useRef(new Set<string>());
 
   useEffect(() => {
     recoverInterrupted().then(onChange).catch(() => {});
@@ -37,13 +41,29 @@ export default function DvrEngine({ onChange }: { onChange: () => void }) {
         const { start, stop, missed } = dvrTick(await activeRecordings(), now);
         for (const r of missed) await updateRecording(r.id, { status: 'missed', error: 'T-Max no estaba abierto a esa hora.' });
         for (const r of stop) {
+          if (ownedByPlayer.has(r.id)) continue; // la termina el reproductor
           const s = stoppers.current.get(r.id);
           if (s) await s();
           else await updateRecording(r.id, { status: 'failed', error: 'La grabación se interrumpió.' });
         }
         const running = new Set(slots.map((x) => x.rec.id));
         for (const r of start) {
-          if (running.has(r.id) || running.size >= MAX_PARALLEL) continue;
+          if (running.has(r.id) || ownedByPlayer.has(r.id)) continue;
+          // Si estás viendo ese mismo canal a pantalla completa, graba ese reproductor (misma conexión).
+          if (offerToPlayer(r)) continue;
+          if (running.size >= MAX_PARALLEL) continue;
+          // Proveedores de 1 conexión (Stalker casi siempre): no abrir otra mientras se ve algo de esa fuente.
+          const src = (await listSources()).find((x) => x.id === r.source_id);
+          const limit = src?.type === 'stalker' ? 1 : src?.account?.maxConnections ?? null;
+          if (limit === 1 && sourceInUse(r.source_id)) {
+            if (!warned.current.has(r.id)) {
+              warned.current.add(r.id);
+              await updateRecording(r.id, { error: 'Esperando: tu proveedor permite 1 conexión y está en uso. Abre ese canal o cierra el que estás viendo.' });
+              await notifyNow(`Para grabar "${r.title}"`, `Tu proveedor permite 1 conexión: abre ${r.channel_name} o cierra el canal que estás viendo.`);
+              onChange();
+            }
+            continue;
+          }
           const channel = await getChannelByKey(r.channel_key);
           if (!channel) {
             await updateRecording(r.id, { status: 'failed', error: 'El canal ya no existe en tus fuentes.' });

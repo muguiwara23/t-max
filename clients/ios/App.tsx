@@ -30,7 +30,7 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [section, setSection] = useState<Section>('live');
   const [dataVersion, setDataVersion] = useState(0);
-  const [player, setPlayer] = useState<{ list: ChannelItem[]; index: number } | null>(null);
+  const [player, setPlayer] = useState<{ list: ChannelItem[]; index: number; autoRecord?: { until: number | null } } | null>(null);
   const [firstRun, setFirstRun] = useState(false);
   const [vodPlayer, setVodPlayer] = useState<VodPlayRequest | null>(null);
   const [progressVersion, setProgressVersion] = useState(0);
@@ -112,7 +112,7 @@ export default function App() {
               <LiveScreen
                 dataVersion={dataVersion}
                 previewEnabled={section === 'live' && !player}
-                onFullscreen={(list, index) => setPlayer({ list, index })}
+                onFullscreen={(list, index, opts) => setPlayer({ list, index, autoRecord: opts?.autoRecord })}
                 onOpenSettings={() => setSection('settings')}
                 focus={liveFocus}
               />
@@ -135,7 +135,7 @@ export default function App() {
       </SafeAreaView>
       <DvrEngine onChange={() => setDvrVersion((v) => v + 1)} />
       {vodPlayer && <VodPlayerScreen request={vodPlayer} onClose={() => { setVodPlayer(null); setProgressVersion((v) => v + 1); }} />}
-      {player && <PlayerScreen list={player.list} startIndex={player.index} onClose={(last) => { setPlayer(null); setLiveFocus({ channel: last, n: Date.now() }); bump(); }} />}
+      {player && <PlayerScreen list={player.list} startIndex={player.index} autoRecord={player.autoRecord} onClose={(last) => { setPlayer(null); setLiveFocus({ channel: last, n: Date.now() }); bump(); }} />}
     </SafeAreaProvider>
   );
 }

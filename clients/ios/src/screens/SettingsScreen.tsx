@@ -22,7 +22,7 @@ import { colors, font, radius } from '../theme';
 import { Button, Chip, Switch, T } from '../ui/kit';
 import { SourceSettingsModal, SubStyleEditor } from './SourceSettings';
 
-export const APP_VERSION = '0.4.0';
+export const APP_VERSION = '0.4.1';
 
 type Cat = 'sources' | 'player' | 'backup' | 'about';
 const CATS: { id: Cat | 'soon'; name: string }[] = [

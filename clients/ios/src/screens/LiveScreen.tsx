@@ -29,7 +29,7 @@ import GuideView from './GuideView';
 interface Props {
   dataVersion: number;
   previewEnabled: boolean;
-  onFullscreen: (list: ChannelItem[], index: number) => void;
+  onFullscreen: (list: ChannelItem[], index: number, opts?: { autoRecord?: { until: number | null } }) => void;
   onOpenSettings: () => void;
   /** Canal en el que quedó la pantalla completa: la vista previa sigue en ese. */
   focus?: { channel: ChannelItem; n: number } | null;
@@ -81,7 +81,7 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
   const recordProgramme = async (c: ChannelItem, p: ProgrammeRow) => {
     const r = await scheduleRecording(c, p);
     if (!r.ok) Alert.alert('No se programó', r.reason ?? '');
-    else Alert.alert('Grabación programada', `${p.title}\n\nDeja T-Max abierto a esa hora: iOS no permite grabar con la app cerrada. Al terminar se guarda en Fotos.`);
+    else Alert.alert('Grabación programada', `${p.title}\n\nDeja T-Max abierto a esa hora: iOS no permite grabar con la app cerrada. Si a esa hora estás viendo ese canal, se graba ahí mismo; si tu proveedor permite 1 sola conexión, no veas otro canal de esa fuente. Al terminar se guarda en Fotos.`);
     setLocalVersion((v) => v + 1);
   };
   const programmeActions = (c: ChannelItem, p: ProgrammeRow) => {
@@ -89,7 +89,7 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
     const recOn = marks.rec.has(`${c.key}@${p.start}`);
     Alert.alert(p.title, `${c.name} · ${hhmm(p.start)} – ${hhmm(p.end)}`, [
       ...(p.start > Date.now() || remOn ? [{ text: remOn ? 'Quitar de Mis programas' : 'Recordarme', onPress: () => void toggleReminder(c, p) }] : []),
-      ...(p.end > Date.now() && !recOn ? [{ text: 'Grabar', onPress: () => void recordProgramme(c, p) }] : []),
+      ...(p.end > Date.now() && !recOn ? [{ text: 'Grabar', onPress: () => (p.start <= Date.now() ? recordNow(c, p) : void recordProgramme(c, p)) }] : []),
       { text: 'Cerrar', style: 'cancel' as const },
     ]);
   };
@@ -160,10 +160,19 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
   const sel = selected ? nowNext(selected.key) : { current: undefined, next: [] as ProgrammeRow[] };
   const empty = sources.length === 0 || (filter === null && allGroup !== null && allGroup.count === 0);
 
-  const openFull = (c: ChannelItem) => {
+  const openFull = (c: ChannelItem, opts?: { autoRecord?: { until: number | null } }) => {
     const list = visible.length ? visible : [c];
     const idx = Math.max(0, list.findIndex((x) => x.key === c.key));
-    onFullscreen(list, idx);
+    onFullscreen(list, idx, opts);
+  };
+
+  /** Grabar lo que está pasando: se abre a pantalla completa y graba ahí (misma conexión). */
+  const recordNow = (c: ChannelItem, cur?: ProgrammeRow) => {
+    Alert.alert(cur?.title ?? c.name, 'Se abre en pantalla completa y graba ahí mismo. Al terminar se guarda en Fotos.', [
+      ...(cur ? [{ text: `Grabar hasta que termine (${hhmm(cur.end)})`, onPress: () => openFull(c, { autoRecord: { until: cur.end } }) }] : []),
+      { text: 'Grabar hasta que la detenga', onPress: () => openFull(c, { autoRecord: { until: null } }) },
+      { text: 'Cancelar', style: 'cancel' as const },
+    ]);
   };
 
   const fav = async () => {
@@ -238,7 +247,7 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
                     {guideSelected.p && guideSelected.p.end > now && (
                       marks.rec.has(`${guideSelected.c.key}@${guideSelected.p.start}`)
                         ? <Button icon="dvr" label="Grabación programada" disabled />
-                        : <Button icon="dvr" label="Grabar" onPress={() => void recordProgramme(guideSelected.c, guideSelected.p!)} />
+                        : <Button icon="dvr" label="Grabar" onPress={() => (guideSelected.p!.start <= now ? recordNow(guideSelected.c, guideSelected.p!) : void recordProgramme(guideSelected.c, guideSelected.p!))} />
                     )}
                   </View>
                 </>
@@ -315,6 +324,7 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
                 )}
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
                   <Button variant="primary" icon="play" label="Ver en pantalla completa" onPress={() => openFull(selected)} />
+                  <Button icon="dvr" label="Grabar" onPress={() => recordNow(selected, sel.current)} />
                   <Button icon={selected.favorite ? 'starFilled' : 'star'} label={selected.favorite ? 'En favoritos' : 'Favorito'} onPress={fav} />
                 </View>
               </View>

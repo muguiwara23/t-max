@@ -12,6 +12,7 @@ import { clock, resumeFrom } from '../data/vod-mapping';
 import { colors, radius } from '../theme';
 import Icon, { type IconName } from '../ui/Icon';
 import { Button, T } from '../ui/kit';
+import StreamInfo, { useStreamFacts } from '../ui/StreamInfo';
 
 interface Props {
   request: VodPlayRequest;
@@ -185,6 +186,14 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
     }),
   ).current;
 
+  const { facts, onProgress: factsProgress } = useStreamFacts({
+    active: overlay,
+    playing: state === 'playing' || state === 'paused' || state === 'buffering',
+    key: `${item.key}#${attempt}`,
+    media: async () => (await mpv.current?.getMediaInfo().catch(() => null)) ?? null,
+    tracks: async () => (await mpv.current?.getTrackList().catch(() => [])) ?? [],
+  });
+
   const shown = scrub ?? pos;
   const pct = dur > 0 ? (shown / dur) * 100 : 0;
   const busy = !error && (state === 'loading' || state === 'buffering' || state === 'idle');
@@ -205,6 +214,7 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
           if (nativeEvent.state === 'paused' || nativeEvent.state === 'ended') setOverlay(true);
         }}
         onProgress={({ nativeEvent }) => {
+          factsProgress(nativeEvent);
           live.current.pos = nativeEvent.position;
           if (nativeEvent.duration > 0) live.current.dur = nativeEvent.duration;
           setPos(nativeEvent.position);
@@ -251,6 +261,7 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
             <View style={{ flex: 1, marginLeft: 12 }}>
               <T kind="title" weight="bold" lines={1}>{item.title}</T>
               {item.subtitle ? <T kind="label" color={colors.textSecondary} lines={1}>{item.subtitle}</T> : null}
+              <StreamInfo facts={{ ...facts, format: item.ext ?? (item.localUrl ? item.localUrl.split('.').pop() : undefined) }} />
             </View>
           </View>
 

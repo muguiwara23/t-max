@@ -48,3 +48,16 @@ test('DVR: nombre de archivo sin acentos ni símbolos, con fecha local', () => {
   const name = recordingFileName({ channel_name: 'Canal Ñ Deportes!', title: 'Fútbol: final', start: Date.UTC(2026, 10, 23, 2, 5) }, 'mp4', 360);
   assert.equal(name, 'Canal-N-Deportes-Futbol-final-20261122-2005.mp4');
 });
+
+import { factChips, qualityLabel, rateLabel } from '../src/data/stream-info.ts';
+
+test('Info del video: calidad, audios y velocidad', () => {
+  assert.equal(qualityLabel(1920, 1080), 'FHD');
+  assert.equal(qualityLabel(1280, 720), 'HD');
+  assert.equal(qualityLabel(3840, 2160), '4K');
+  assert.equal(qualityLabel(1920, 800), 'FHD'); // cine ancho
+  assert.equal(qualityLabel(720, 576), 'SD');
+  assert.equal(rateLabel(750000), '6.0 Mbps');
+  const chips = factChips({ width: 1920, height: 1080, fps: 59.94, videoCodec: 'h264', audio: [{ lang: 'spa', title: '', selected: true }, { lang: 'eng', title: '', selected: false }], rate: 1e6, buffered: 7.6 });
+  assert.deepEqual(chips.map((c) => c.text), ['FHD · 1080p', 'H.264 · 60 fps', '2 audios · ES EN', '↓ 8.0 Mbps', 'búfer 8 s']);
+});

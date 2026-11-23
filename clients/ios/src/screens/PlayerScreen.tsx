@@ -6,8 +6,12 @@ import type { File } from 'expo-file-system';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AppState, FlatList, Pressable, StyleSheet, View } from 'react-native';
 
-import { createManualRecording } from '../data/dvr';
+import { createManualRecording, scheduleRecording, updateRecording } from '../data/dvr';
+import { PAD_AFTER_MS } from '../data/dvr-model';
+import { addReminder } from '../data/reminders';
+import { releaseFromPlayer, setPlayerRecorder } from '../dvr/bus';
 import { startWriting, stopWriting, verifyOrFallback } from '../dvr/record';
+import StreamInfo, { useStreamFacts } from '../ui/StreamInfo';
 
 import { hhmm, type ProgrammeRow } from '../data/mapping';
 import { markWatched, programmesFor, type ChannelItem } from '../data/queries';
@@ -21,9 +25,19 @@ interface Props {
   startIndex: number;
   /** Devuelve el canal que se estaba viendo al salir (puede no ser el inicial). */
   onClose: (last: ChannelItem) => void;
+  /** Empezar a grabar en cuanto abra (desde "Grabar" en la ficha de TV en vivo). */
+  autoRecord?: { until: number | null } | null;
 }
 
-export default function PlayerScreen({ list, startIndex, onClose }: Props) {
+function mmss(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = String(s % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+}
+
+export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: Props) {
   useKeepAwake();
   const video = useRef<VideoHandle>(null);
   const [index, setIndex] = useState(startIndex);
@@ -36,9 +50,12 @@ export default function PlayerScreen({ list, startIndex, onClose }: Props) {
   const [now, setNow] = useState(Date.now());
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const channel = list[index]!;
-  const [rec, setRec] = useState<{ id: string; file: File; at: number } | null>(null);
+  const [rec, setRec] = useState<{ id: string; file: File; at: number; until: number | null } | null>(null);
   const recRef = useRef(rec);
   recRef.current = rec;
+  const channelRef = useRef(channel);
+  channelRef.current = channel;
+  const progsRef = useRef<ProgrammeRow[]>([]);
   const setProp = (n: string, v: string) => video.current?.setProp(n, v) ?? Promise.resolve();
 
   const stopRec = useCallback(async (reason?: string) => {
@@ -47,16 +64,25 @@ export default function PlayerScreen({ list, startIndex, onClose }: Props) {
     recRef.current = null;
     setRec(null);
     await stopWriting(r.id, setProp, reason);
+    releaseFromPlayer(r.id);
+    // Volver al búfer normal de TV en vivo (menos retraso).
+    await setProp('cache-pause-wait', '1').catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const startRec = async () => {
+  /** Graba en este mismo reproductor (misma conexión). until = hora de fin (null = hasta que lo detengas). */
+  const startRec = async (opts: { until?: number | null; title?: string; recId?: string } = {}) => {
     if (recRef.current) return;
     try {
-      const title = progs.find((p) => p.start <= Date.now() && p.end > Date.now())?.title ?? channel.name;
-      const info = { channel_name: channel.name, title, start: Date.now() };
+      const ch = channelRef.current;
+      const nowMs = Date.now();
+      const title = opts.title ?? progsRef.current.find((p) => p.start <= nowMs && p.end > nowMs)?.title ?? ch.name;
+      const info = { channel_name: ch.name, title, start: nowMs };
+      // Al grabar, juntar unos segundos antes de seguir si se vacía el búfer: menos cortes seguidos.
+      await setProp('cache-pause-wait', '3').catch(() => {});
       const file = await startWriting(setProp, info);
-      const id = await createManualRecording(channel, title, file);
-      setRec({ id, file, at: Date.now() });
+      const id = opts.recId ?? (await createManualRecording(ch, title, file));
+      if (opts.recId) await updateRecording(opts.recId, { file: file.uri, status: 'recording' });
+      setRec({ id, file, at: nowMs, until: opts.until ?? null });
       setTimeout(async () => {
         const r = recRef.current;
         if (r && r.id === id) {
@@ -70,6 +96,43 @@ export default function PlayerScreen({ list, startIndex, onClose }: Props) {
   };
 
   // Al salir de la app, cambiar de canal o cerrar: la grabación se cierra bien y pasa a Fotos.
+  // Fin automático: al terminar el programa (más un margen).
+  useEffect(() => {
+    if (!rec?.until) return;
+    const t = setInterval(() => {
+      const r = recRef.current;
+      if (r?.until && Date.now() >= r.until + PAD_AFTER_MS) void stopRec();
+    }, 5000);
+    return () => clearInterval(t);
+  }, [rec?.id, rec?.until, stopRec]);
+
+  // Si toca una grabación programada de este mismo canal, la hace este reproductor (no abre otra conexión).
+  useEffect(() => {
+    setPlayerRecorder((r) => {
+      if (recRef.current || r.channel_key !== channelRef.current.key) return false;
+      void startRec({ until: r.end, title: r.title, recId: r.id });
+      return true;
+    });
+    return () => setPlayerRecorder(null);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Grabar en cuanto empiece a verse (viene de "Grabar" en TV en vivo).
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (autoRecord && !autoStarted.current && state === 'playing') {
+      autoStarted.current = true;
+      void startRec({ until: autoRecord.until });
+    }
+  }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Segundero del indicador de grabación.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!rec) return;
+    const t = setInterval(() => setTick((x) => x + 1), 1000);
+    return () => clearInterval(t);
+  }, [rec?.id]);
+
   useEffect(() => {
     const sub = AppState.addEventListener('change', (st) => {
       if (st === 'background') void stopRec('Se detuvo porque T-Max pasó a segundo plano.');
@@ -94,7 +157,7 @@ export default function PlayerScreen({ list, startIndex, onClose }: Props) {
     setStartMs(null);
     setTracks([]);
     markWatched(channel.key).catch(() => {});
-    programmesFor([channel], Date.now() - 3600000, Date.now() + 6 * 3600000).then((m) => setProgs(m.get(channel.key) ?? [])).catch(() => setProgs([]));
+    programmesFor([channel], Date.now() - 3600000, Date.now() + 6 * 3600000).then((m) => { progsRef.current = m.get(channel.key) ?? []; setProgs(progsRef.current); }).catch(() => setProgs([]));
   }, [channel.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -119,6 +182,54 @@ export default function PlayerScreen({ list, startIndex, onClose }: Props) {
     setPanel((p) => (p === kind ? 'none' : kind));
   };
 
+  const { facts, onProgress } = useStreamFacts({
+    active: overlay,
+    playing: state === 'playing' || state === 'paused' || state === 'buffering',
+    key: channel.key,
+    media: () => video.current?.media() ?? Promise.resolve(null),
+    tracks: () => video.current?.tracks() ?? Promise.resolve([]),
+  });
+
+  /** Tocar "Ahora": grabar este programa sin buscarlo en la guía. */
+  const nowActions = () => {
+    poke();
+    if (recRef.current) {
+      Alert.alert('Grabando', '¿Detener la grabación? Se guarda en Fotos.', [
+        { text: 'Seguir grabando', style: 'cancel' },
+        { text: 'Detener', style: 'destructive', onPress: () => void stopRec() },
+      ]);
+      return;
+    }
+    Alert.alert(cur?.title ?? channel.name, cur ? `${channel.name} · hasta las ${hhmm(cur.end)}` : channel.name, [
+      ...(cur ? [{ text: `Grabar hasta que termine (${hhmm(cur.end)})`, onPress: () => void startRec({ until: cur.end, title: cur.title }) }] : []),
+      { text: 'Grabar hasta que la detenga', onPress: () => void startRec({ until: null }) },
+      { text: 'Cerrar', style: 'cancel' as const },
+    ]);
+  };
+
+  /** Tocar "A continuación": avisarme o programar la grabación. */
+  const nextActions = () => {
+    if (!next) return;
+    poke();
+    Alert.alert(next.title, `${channel.name} · ${hhmm(next.start)} – ${hhmm(next.end)}`, [
+      {
+        text: 'Recordarme',
+        onPress: async () => {
+          const r = await addReminder(channel, next);
+          Alert.alert('Guardado en Mis programas', r.notified ? 'Te aviso un minuto antes.' : 'No se pudo programar el aviso: permite las notificaciones de T-Max en Ajustes del iPad.');
+        },
+      },
+      {
+        text: 'Programar grabación',
+        onPress: async () => {
+          const r = await scheduleRecording(channel, next);
+          Alert.alert(r.ok ? 'Grabación programada' : 'No se programó', r.ok ? 'Si a esa hora sigues en este canal, se graba aquí mismo. Deja T-Max abierto.' : r.reason ?? '');
+        },
+      },
+      { text: 'Cerrar', style: 'cancel' as const },
+    ]);
+  };
+
   const audio = tracks.filter((t) => t.type === 'audio');
   const subs = tracks.filter((t) => t.type === 'sub');
   const label = (t: TrackInfo) => [t.title, t.lang, t.codec, t.channelCount ? `${t.channelCount}ch` : ''].filter(Boolean).join(' · ') || `Pista ${t.id}`;
@@ -132,6 +243,7 @@ export default function PlayerScreen({ list, startIndex, onClose }: Props) {
         style={StyleSheet.absoluteFill}
         onState={setState}
         onStarted={(ms, format) => setStartMs({ ms, format })}
+        onProgress={onProgress}
       />
       <Pressable style={StyleSheet.absoluteFill} onPress={() => (overlay ? (setOverlay(false), setPanel('none')) : poke())} />
 
@@ -143,13 +255,13 @@ export default function PlayerScreen({ list, startIndex, onClose }: Props) {
             <Pressable accessibilityLabel="Volver" onPress={() => { void stopRec(); onClose(channel); }} style={styles.round}><Icon name="back" size={20} /></Pressable>
             <View style={{ flex: 1, marginLeft: 12 }}>
               <T kind="title" weight="bold" lines={1}>{channel.number ?? ''} · {channel.name}</T>
-              <T kind="label" color={colors.textSecondary}>
-                {startMs ? `${startMs.format.toUpperCase()} · arranque ${startMs.ms} ms` : state === 'buffering' ? 'Cargando…' : ' '}
-              </T>
+              {state === 'buffering' || !startMs ? <T kind="label" color={colors.textSecondary}>{state === 'buffering' ? 'Cargando…' : ' '}</T> : null}
+              <StreamInfo facts={{ ...facts, format: startMs?.format }} extra={startMs ? `arranque ${startMs.ms} ms` : null} />
             </View>
             {rec ? (
               <Pressable accessibilityLabel="Detener grabación" onPress={() => void stopRec()} style={[styles.pill, { backgroundColor: '#FF5A4E33' }]}>
-                <View style={styles.liveDot} /><T kind="label" weight="bold">GRABANDO · detener</T>
+                <View style={styles.liveDot} />
+                <T kind="label" weight="bold" style={{ fontVariant: ['tabular-nums'] }}>REC {mmss(Date.now() - rec.at)}{rec.until ? ` · hasta ${hhmm(rec.until)}` : ''} · detener</T>
               </Pressable>
             ) : (
               <View style={styles.pill}><View style={styles.liveDot} /><T kind="label" weight="bold">EN VIVO</T></View>
@@ -193,15 +305,15 @@ export default function PlayerScreen({ list, startIndex, onClose }: Props) {
 
           <View style={styles.bottom}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 24 }}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <T kind="label" color={colors.textSecondary}>{cur ? `AHORA · ${hhmm(cur.start)} – ${hhmm(cur.end)}` : 'Sin información de guía'}</T>
+              <Pressable onPress={nowActions} style={{ flex: 1, gap: 4 }} accessibilityLabel="Opciones del programa actual">
+                <T kind="label" color={colors.textSecondary}>{cur ? `AHORA · ${hhmm(cur.start)} – ${hhmm(cur.end)}` : 'Sin información de guía'} · <T kind="label" weight="bold" color={colors.accent}>{rec ? 'grabando' : 'tocar para grabar'}</T></T>
                 <T kind="title" weight="bold" lines={1}>{cur?.title ?? channel.name}</T>
-              </View>
+              </Pressable>
               {next && (
-                <View style={{ alignItems: 'flex-end', gap: 2 }}>
-                  <T kind="label" color={colors.textSecondary}>A continuación · {hhmm(next.start)}</T>
+                <Pressable onPress={nextActions} style={{ alignItems: 'flex-end', gap: 2 }} accessibilityLabel="Opciones del siguiente programa">
+                  <T kind="label" color={colors.textSecondary}>A continuación · {hhmm(next.start)} · <T kind="label" weight="bold" color={colors.accent}>avisar / grabar</T></T>
                   <T weight="semibold" lines={1}>{next.title}</T>
-                </View>
+                </Pressable>
               )}
             </View>
             {cur && <View style={styles.bar}><View style={[styles.barFill, { width: `${pct}%` }]} /></View>}
@@ -217,7 +329,7 @@ export default function PlayerScreen({ list, startIndex, onClose }: Props) {
               <Ctl icon="next" label="Canal siguiente" big onPress={() => { go(1); poke(); }} />
               <View style={{ width: 16 }} />
               <Ctl icon="list" label="Lista de canales" onPress={() => { setPanel((p) => (p === 'channels' ? 'none' : 'channels')); poke(); }} />
-              <Ctl icon="dvr" label={rec ? 'Detener grabación' : 'Grabar'} active={!!rec} onPress={() => { rec ? void stopRec() : void startRec(); poke(); }} />
+              <Ctl icon="dvr" label={rec ? 'Detener grabación' : 'Grabar'} active={!!rec} onPress={() => { if (rec) void stopRec(); else nowActions(); poke(); }} />
             </View>
           </View>
         </>
