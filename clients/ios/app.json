@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "T-Max",
+    "slug": "t-max",
+    "version": "0.2.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0A0B0D",
+    "ios": {
+      "supportsTablet": true,
+      "requireFullScreen": false,
+      "bundleIdentifier": "com.muguiwara23.tmax",
+      "buildNumber": "2",
+      "infoPlist": {
+        "NSAppTransportSecurity": { "NSAllowsArbitraryLoads": true },
+        "NSLocalNetworkUsageDescription": "T-Max se conecta a los servidores de tu red local que tú configures.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "plugins": [
+      "expo-mpv",
+      ["expo-build-properties", { "ios": { "deploymentTarget": "16.4" } }],
+      "expo-secure-store",
+      "expo-sqlite",
+      "expo-font"
+    ]
+  }
+}

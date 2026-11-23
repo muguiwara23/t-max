@@ -1,0 +1,343 @@
+// TV en vivo: una sola lista (Grupos → canales → Atrás), vista previa y guía por canales.
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FlatList, Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
+
+import { hhmm, type ProgrammeRow } from '../data/mapping';
+import {
+  ALL,
+  channelsIn,
+  listGroups,
+  programmesFor,
+  searchChannels,
+  toggleFavorite,
+  type ChannelItem,
+  type GroupItem,
+} from '../data/queries';
+import { colors, font, radius } from '../theme';
+import Icon from '../ui/Icon';
+import { Button, T } from '../ui/kit';
+import Video from '../ui/Video';
+import GuideView from './GuideView';
+
+interface Props {
+  dataVersion: number;
+  previewEnabled: boolean;
+  onFullscreen: (list: ChannelItem[], index: number) => void;
+  onOpenSettings: () => void;
+}
+
+const HALF_HOUR = 30 * 60000;
+
+function useClock(): number {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
+  return now;
+}
+
+export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, onOpenSettings }: Props) {
+  const now = useClock();
+  const [mode, setMode] = useState<'list' | 'guide'>('list');
+  const [groups, setGroups] = useState<{ pinned: GroupItem[]; groups: GroupItem[] }>({ pinned: [], groups: [] });
+  const [group, setGroup] = useState<GroupItem | null>(null);
+  const [channels, setChannels] = useState<ChannelItem[]>([]);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<ChannelItem[] | null>(null);
+  const [selected, setSelected] = useState<ChannelItem | null>(null);
+  const [programmes, setProgrammes] = useState<Map<string, ProgrammeRow[]>>(new Map());
+  const [guideStart, setGuideStart] = useState(() => Math.floor(Date.now() / HALF_HOUR) * HALF_HOUR - HALF_HOUR);
+  const [guideSel, setGuideSel] = useState<{ key: string; start: number } | null>(null);
+
+  useEffect(() => {
+    listGroups().then(setGroups).catch(() => {});
+  }, [dataVersion]);
+
+  useEffect(() => {
+    if (!group) return;
+    channelsIn(group.id).then(setChannels).catch(() => setChannels([]));
+  }, [group, dataVersion]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (query.trim()) searchChannels(query).then(setResults).catch(() => setResults([]));
+      else setResults(null);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const visible = results ?? (group ? channels : []);
+  const guideChannels = results ?? (group ? channels : []);
+
+  // Programas de los canales visibles (ventana amplia para lista y guía).
+  const progKey = visible.map((c) => c.key).join('|');
+  useEffect(() => {
+    if (visible.length === 0) {
+      setProgrammes(new Map());
+      return;
+    }
+    const from = Math.min(now - 6 * 3600000, guideStart);
+    programmesFor(visible.slice(0, 800), from, Math.max(now, guideStart) + 6 * 3600000).then(setProgrammes).catch(() => {});
+  }, [progKey, guideStart, Math.floor(now / 300000)]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const nowNext = useCallback(
+    (key: string) => {
+      const list = programmes.get(key) ?? [];
+      const i = list.findIndex((p) => p.start <= now && p.end > now);
+      return { current: i >= 0 ? list[i] : undefined, next: i >= 0 ? list.slice(i + 1, i + 4) : list.filter((p) => p.start > now).slice(0, 3) };
+    },
+    [programmes, now],
+  );
+
+  const sel = selected ? nowNext(selected.key) : { current: undefined, next: [] as ProgrammeRow[] };
+  const empty = groups.groups.length <= 1 && (groups.groups[0]?.count ?? 0) === 0;
+
+  const openFull = (c: ChannelItem) => {
+    const list = visible.length ? visible : [c];
+    const idx = Math.max(0, list.findIndex((x) => x.key === c.key));
+    onFullscreen(list, idx);
+  };
+
+  const fav = async () => {
+    if (!selected) return;
+    await toggleFavorite(selected.key, !selected.favorite);
+    setSelected({ ...selected, favorite: !selected.favorite });
+    listGroups().then(setGroups).catch(() => {});
+  };
+
+  const guideSelected = useMemo(() => {
+    if (!guideSel) return null;
+    const c = guideChannels.find((x) => x.key === guideSel.key);
+    const p = (programmes.get(guideSel.key) ?? []).find((x) => x.start === guideSel.start) ?? null;
+    return c ? { c, p } : null;
+  }, [guideSel, guideChannels, programmes]);
+
+  return (
+    <View style={{ flex: 1, gap: 12 }}>
+      <View style={styles.header}>
+        <T kind="display" weight="bold">TV en vivo</T>
+        <View style={styles.segment}>
+          <Pressable onPress={() => setMode('list')} style={[styles.segBtn, mode === 'list' && styles.segOn]}>
+            <T kind="label" weight="bold" color={mode === 'list' ? colors.text : colors.textSecondary}>Lista</T>
+          </Pressable>
+          <Pressable onPress={() => { setMode('guide'); if (!group && !results) setGroup(groups.groups[0] ?? null); }} style={[styles.segBtn, mode === 'guide' && styles.segOn]}>
+            <T kind="label" weight="bold" color={mode === 'guide' ? colors.text : colors.textSecondary}>Guía</T>
+          </Pressable>
+        </View>
+        <View style={{ flex: 1 }} />
+        <View style={styles.search}>
+          <Icon name="search" size={18} color={colors.textSecondary} />
+          <TextInput value={query} onChangeText={setQuery} placeholder="Buscar canal o número" placeholderTextColor={colors.textTertiary}
+            autoCapitalize="none" autoCorrect={false} style={styles.searchInput} />
+        </View>
+        <T kind="title" weight="semibold" style={{ fontVariant: ['tabular-nums'] }}>{hhmm(now)}</T>
+      </View>
+
+      {empty ? (
+        <View style={[styles.panel, styles.center]}>
+          <T kind="title" weight="bold">Agrega tu primera fuente</T>
+          <T color={colors.textSecondary} style={{ marginTop: 6, marginBottom: 16, textAlign: 'center' }}>
+            Xtream, lista M3U o portal Stalker. Todo se guarda solo en este iPad.
+          </T>
+          <Button variant="primary" icon="plus" label="Ir a Ajustes → Fuentes" onPress={onOpenSettings} />
+        </View>
+      ) : mode === 'guide' ? (
+        <View style={{ flex: 1, gap: 12 }}>
+          <View style={styles.guideTop}>
+            <Video channel={previewEnabled ? (guideSelected?.c ?? selected) : null} style={styles.guideVideo} />
+            <View style={[styles.panel, { flex: 1, padding: 16, gap: 6 }]}>
+              {guideSelected ? (
+                <>
+                  <T kind="label" color={colors.textSecondary}>{guideSelected.c.number ?? ''} · {guideSelected.c.name}{guideSelected.p ? ` · ${hhmm(guideSelected.p.start)} – ${hhmm(guideSelected.p.end)}` : ''}</T>
+                  <T kind="title" weight="bold" lines={2}>{guideSelected.p?.title ?? guideSelected.c.name}</T>
+                  {guideSelected.p?.description ? <T kind="label" color={colors.textSecondary} lines={3}>{guideSelected.p.description}</T> : null}
+                  <View style={{ flex: 1 }} />
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <Button variant="primary" icon="play" label="Ver canal" onPress={() => openFull(guideSelected.c)} />
+                  </View>
+                </>
+              ) : (
+                <T color={colors.textSecondary}>Toca un programa para ver su ficha. Toca un canal para verlo aquí.</T>
+              )}
+            </View>
+          </View>
+          <GuideView
+            channels={guideChannels}
+            programmes={programmes}
+            windowStart={guideStart}
+            now={now}
+            selected={guideSel}
+            onShift={(h) => setGuideStart((s) => s + h * 3600000)}
+            onSelect={(c, p) => {
+              setGuideSel(p ? { key: c.key, start: p.start } : { key: c.key, start: -1 });
+              if (!p || (p.start <= now && p.end > now)) setSelected(c);
+            }}
+          />
+        </View>
+      ) : (
+        <View style={{ flex: 1, flexDirection: 'row', gap: 12 }}>
+          <View style={[styles.panel, styles.listCol]}>
+            {results ? (
+              <>
+                <View style={styles.listHead}><T kind="title" weight="bold">Resultados</T><T kind="label" color={colors.textSecondary}>{results.length}</T></View>
+                <ChannelList channels={results} selectedKey={selected?.key} nowNext={nowNext} onPick={setSelected} onLong={openFull} />
+              </>
+            ) : group ? (
+              <>
+                <View style={styles.listHead}>
+                  <Button compact icon="back" label="Grupos" onPress={() => setGroup(null)} />
+                  <T kind="title" weight="bold" lines={1} style={{ flex: 1, marginLeft: 8 }}>{group.name}</T>
+                  <T kind="label" color={colors.textSecondary}>{channels.length}</T>
+                </View>
+                <ChannelList channels={channels} selectedKey={selected?.key} nowNext={nowNext} onPick={setSelected} onLong={openFull} />
+              </>
+            ) : (
+              <FlatList
+                data={[{ id: '__h1', name: 'MIS LISTAS', count: -1 }, ...groups.pinned, { id: '__h2', name: 'GRUPOS', count: -1 }, ...groups.groups]}
+                keyExtractor={(g) => g.id}
+                renderItem={({ item }) =>
+                  item.count < 0 ? (
+                    <T kind="label" weight="semibold" color={colors.textSecondary} style={styles.sectionLabel}>{item.name}</T>
+                  ) : (
+                    <Pressable style={({ pressed }) => [styles.groupRow, pressed && { backgroundColor: colors.raised }]} onPress={() => setGroup(item)}>
+                      <T weight={item.special ? 'bold' : 'medium'} style={{ flex: 1 }} lines={1}>{item.name}</T>
+                      <T kind="label" color={colors.textSecondary}>{item.id === ALL || item.count ? item.count : ''}</T>
+                      <Icon name="chevron" size={18} color={colors.textTertiary} />
+                    </Pressable>
+                  )
+                }
+              />
+            )}
+          </View>
+
+          <View style={{ flex: 1, gap: 12 }}>
+            <View>
+              <Video channel={previewEnabled ? selected : null} style={styles.preview} />
+              {selected && (
+                <View style={styles.previewBadges} pointerEvents="box-none">
+                  <View style={styles.badge}><T kind="label" weight="semibold" lines={1}>{selected.number ?? ''} · {selected.name}</T></View>
+                  <View style={{ flex: 1 }} />
+                  <View style={styles.badge}><View style={styles.liveDot} /><T kind="caption" weight="bold">EN VIVO</T></View>
+                </View>
+              )}
+              {selected && (
+                <Pressable accessibilityLabel="Pantalla completa" onPress={() => openFull(selected)} style={styles.fullBtn}>
+                  <Icon name="expand" size={20} />
+                </Pressable>
+              )}
+            </View>
+            {selected ? (
+              <View style={[styles.panel, { padding: 16, gap: 8 }]}>
+                {sel.current ? (
+                  <>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <View style={styles.nowPill}><T kind="caption" weight="bold" color={colors.accent}>AHORA</T></View>
+                      <T kind="label" color={colors.textSecondary}>{hhmm(sel.current.start)} – {hhmm(sel.current.end)} · quedan {Math.max(0, Math.round((sel.current.end - now) / 60000))} min</T>
+                    </View>
+                    <T kind="title" weight="semibold" lines={2}>{sel.current.title}</T>
+                    <View style={styles.progress}><View style={[styles.progressFill, { width: `${Math.min(100, Math.max(0, ((now - sel.current.start) / (sel.current.end - sel.current.start)) * 100))}%` }]} /></View>
+                    {sel.current.description ? <T kind="label" color={colors.textSecondary} lines={3}>{sel.current.description}</T> : null}
+                  </>
+                ) : (
+                  <T kind="title" weight="semibold">{selected.name}</T>
+                )}
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
+                  <Button variant="primary" icon="play" label="Ver en pantalla completa" onPress={() => openFull(selected)} />
+                  <Button icon={selected.favorite ? 'starFilled' : 'star'} label={selected.favorite ? 'En favoritos' : 'Favorito'} onPress={fav} />
+                </View>
+              </View>
+            ) : (
+              <View style={[styles.panel, { padding: 16 }]}>
+                <T color={colors.textSecondary}>Elige un grupo y luego un canal para verlo aquí. Mantén presionado un canal para abrirlo a pantalla completa.</T>
+              </View>
+            )}
+            {selected && sel.next.length > 0 && (
+              <View style={{ gap: 8 }}>
+                <T kind="label" weight="semibold" color={colors.textSecondary} style={{ marginLeft: 4 }}>A CONTINUACIÓN</T>
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  {sel.next.map((p) => (
+                    <View key={p.start} style={[styles.panel, styles.nextCard]}>
+                      <T kind="label" color={colors.textSecondary}>{hhmm(p.start)} – {hhmm(p.end)}</T>
+                      <T weight="semibold" lines={2}>{p.title}</T>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function ChannelList({ channels, selectedKey, nowNext, onPick, onLong }: {
+  channels: ChannelItem[];
+  selectedKey?: string;
+  nowNext: (key: string) => { current?: ProgrammeRow };
+  onPick: (c: ChannelItem) => void;
+  onLong: (c: ChannelItem) => void;
+}) {
+  const now = Date.now();
+  return (
+    <FlatList
+      data={channels}
+      keyExtractor={(c) => c.key}
+      initialNumToRender={16}
+      windowSize={9}
+      getItemLayout={(_d, i) => ({ length: 68, offset: 68 * i, index: i })}
+      renderItem={({ item }) => {
+        const cur = nowNext(item.key).current;
+        const sel = item.key === selectedKey;
+        const pct = cur ? Math.min(100, ((now - cur.start) / (cur.end - cur.start)) * 100) : 0;
+        return (
+          <Pressable onPress={() => (sel ? onLong(item) : onPick(item))} onLongPress={() => onLong(item)}
+            style={[styles.chRow, sel && { backgroundColor: colors.hover }]}>
+            <T kind="label" color={colors.textSecondary} style={styles.chNum}>{item.number ?? ''}</T>
+            <View style={styles.logo}>
+              {item.logo ? <Image source={{ uri: item.logo }} style={styles.logoImg} resizeMode="contain" /> : <T kind="label" weight="bold">{item.name.slice(0, 2).toUpperCase()}</T>}
+            </View>
+            <View style={{ flex: 1, gap: 3 }}>
+              <T weight={sel ? 'bold' : 'medium'} lines={1}>{item.name}</T>
+              <T kind="caption" color={colors.textSecondary} lines={1}>{cur?.title ?? ' '}</T>
+              <View style={styles.thinBar}><View style={{ height: 3, width: `${pct}%`, backgroundColor: sel ? colors.accent : colors.textTertiary }} /></View>
+            </View>
+            {item.favorite ? <Icon name="starFilled" size={14} color={colors.accent} /> : null}
+          </Pressable>
+        );
+      }}
+    />
+  );
+}
+
+const styles = StyleSheet.create({
+  header: { height: 56, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 4 },
+  segment: { flexDirection: 'row', backgroundColor: colors.panel, borderRadius: radius.pill, padding: 4, gap: 4 },
+  segBtn: { height: 32, paddingHorizontal: 14, borderRadius: radius.pill, justifyContent: 'center' },
+  segOn: { backgroundColor: colors.hover },
+  search: { height: 40, width: 260, borderRadius: radius.pill, backgroundColor: colors.panel, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14 },
+  searchInput: { flex: 1, color: colors.text, fontFamily: font.medium, fontSize: 15 },
+  panel: { backgroundColor: colors.panel, borderRadius: radius.lg },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  listCol: { width: 380, paddingVertical: 10, paddingHorizontal: 8 },
+  listHead: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6, paddingBottom: 10, gap: 6 },
+  sectionLabel: { marginTop: 10, marginBottom: 4, marginLeft: 12, letterSpacing: 0.6 },
+  groupRow: { height: 52, borderRadius: radius.md, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  chRow: { height: 66, marginBottom: 2, borderRadius: radius.md, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  chNum: { width: 34, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  logo: { width: 44, height: 44, borderRadius: 10, backgroundColor: colors.hover, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  logoImg: { width: 40, height: 40 },
+  thinBar: { height: 3, borderRadius: 2, backgroundColor: colors.hover, overflow: 'hidden' },
+  preview: { width: '100%', aspectRatio: 16 / 9, borderRadius: radius.lg },
+  previewBadges: { position: 'absolute', left: 12, right: 12, top: 12, flexDirection: 'row', gap: 8 },
+  badge: { height: 30, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.overlayPanel, flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 360 },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.live },
+  fullBtn: { position: 'absolute', right: 12, bottom: 12, width: 44, height: 44, borderRadius: 22, backgroundColor: colors.overlayPanel, alignItems: 'center', justifyContent: 'center' },
+  nowPill: { height: 24, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: colors.accentSoft, justifyContent: 'center' },
+  progress: { height: 4, borderRadius: 2, backgroundColor: colors.hover, overflow: 'hidden' },
+  progressFill: { height: 4, backgroundColor: colors.accent },
+  nextCard: { flex: 1, padding: 14, gap: 6, borderRadius: radius.md },
+  guideTop: { height: 230, flexDirection: 'row', gap: 12 },
+  guideVideo: { height: 230, aspectRatio: 16 / 9, borderRadius: radius.lg },
+});

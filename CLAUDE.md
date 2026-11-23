@@ -23,7 +23,8 @@ Lee esto antes de tocar el repositorio.
 - `contracts/` — JSON Schema, fixtures sintéticos y casos dorados que todos los clientes deben pasar.
 - `packages/core` — dominio en TypeScript puro (sin dependencias): parsers M3U/XMLTV, clientes Xtream/Stalker, emparejado EPG, redacción. La red se inyecta (`HttpClient`); el núcleo nunca llama a `fetch` ni a servidores.
 - `poc/` — pruebas de viabilidad desechables (Fase 0). No son la app final.
-- `clients/` — (futuro) `ios` (React Native), `tv-web` (Tizen + webOS), `roku` (BrightScript).
+- `clients/ios` — app React Native (Expo) para iPhone/iPad; consume `@tmax/core` vía `file:` y Metro (`metro.config.js`).
+- `clients/` — (futuro) `tv-web` (Tizen + webOS), `roku` (BrightScript).
 
 No crear carpetas vacías para fases futuras.
 

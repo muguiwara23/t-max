@@ -1,0 +1,32 @@
+{
+  "name": "t-max-ios",
+  "version": "0.2.0",
+  "private": true,
+  "license": "GPL-3.0-only",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@expo-google-fonts/manrope": "^0.4.3",
+    "@tmax/core": "file:../../packages/core",
+    "expo": "~57.0.33",
+    "expo-build-properties": "~57.0.23",
+    "expo-font": "~57.0.4",
+    "expo-keep-awake": "~57.0.2",
+    "expo-mpv": "0.1.27",
+    "expo-secure-store": "~57.0.4",
+    "expo-sqlite": "~57.0.5",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-svg": "15.15.4"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  }
+}
