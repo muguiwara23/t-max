@@ -136,8 +136,8 @@ export default function DvrScreen({ dataVersion, onPlay }: { dataVersion: number
 const styles = StyleSheet.create({
   header: { height: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4 },
   panel: { backgroundColor: colors.panel, borderRadius: radius.lg },
-  note: { padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  note: { padding: 14, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10 },
   head: { marginTop: 12, marginBottom: 4, marginLeft: 10, letterSpacing: 0.6 },
-  row: { minHeight: 64, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.raised, marginBottom: 6 },
+  row: { minHeight: 64, flexWrap: 'wrap', borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.raised, marginBottom: 6 },
   dot: { width: 10, height: 10, borderRadius: 5 },
 });

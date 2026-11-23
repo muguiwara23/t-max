@@ -109,6 +109,6 @@ const styles = StyleSheet.create({
   header: { height: 56, justifyContent: 'center', paddingHorizontal: 4 },
   panel: { backgroundColor: colors.panel, borderRadius: radius.lg },
   day: { marginTop: 12, marginBottom: 4, marginLeft: 10, letterSpacing: 0.6 },
-  row: { minHeight: 64, borderRadius: radius.md, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.raised, marginBottom: 6 },
+  row: { minHeight: 64, flexWrap: 'wrap', borderRadius: radius.md, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.raised, marginBottom: 6 },
   remove: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.hover, alignItems: 'center', justifyContent: 'center' },
 });

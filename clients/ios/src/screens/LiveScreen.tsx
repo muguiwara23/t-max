@@ -23,6 +23,7 @@ import { colors, font, radius } from '../theme';
 import Icon from '../ui/Icon';
 import { Button, T } from '../ui/kit';
 import Video from '../ui/Video';
+import { useIsPhone } from '../ui/layout';
 import GroupsList from './GroupsList';
 import GuideView from './GuideView';
 
@@ -48,6 +49,7 @@ function useClock(): number {
 
 export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, onOpenSettings, focus }: Props) {
   const now = useClock();
+  const phone = useIsPhone();
   const [mode, setMode] = useState<'list' | 'guide'>('list');
   const [sources, setSources] = useState<Source[]>([]);
   const [filter, setFilterState] = useState<SourceFilter>(null);
@@ -192,7 +194,7 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
   return (
     <View style={{ flex: 1, gap: 12 }}>
       <View style={styles.header}>
-        <T kind="display" weight="bold">TV en vivo</T>
+        <T kind={phone ? 'title' : 'display'} weight="bold">{phone ? 'En vivo' : 'TV en vivo'}</T>
         <View style={styles.segment}>
           <Pressable onPress={() => setMode('list')} style={[styles.segBtn, mode === 'list' && styles.segOn]}>
             <T kind="label" weight="bold" color={mode === 'list' ? colors.text : colors.textSecondary}>Lista</T>
@@ -202,12 +204,12 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
           </Pressable>
         </View>
         <View style={{ flex: 1 }} />
-        <View style={styles.search}>
+        <View style={[styles.search, phone && { width: undefined, flex: 2 }]}>
           <Icon name="search" size={18} color={colors.textSecondary} />
           <TextInput value={query} onChangeText={setQuery} placeholder="Buscar canal o número" placeholderTextColor={colors.textTertiary}
             autoCapitalize="none" autoCorrect={false} style={styles.searchInput} />
         </View>
-        <T kind="title" weight="semibold" style={{ fontVariant: ['tabular-nums'] }}>{hhmm(now)}</T>
+        {!phone && <T kind="title" weight="semibold" style={{ fontVariant: ['tabular-nums'] }}>{hhmm(now)}</T>}
       </View>
 
       {sources.length > 1 && (
@@ -229,8 +231,8 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
         </View>
       ) : mode === 'guide' ? (
         <View style={{ flex: 1, gap: 12 }}>
-          <View style={styles.guideTop}>
-            <Video channel={previewEnabled ? (guideSelected?.c ?? selected) : null} style={styles.guideVideo} />
+          <View style={[styles.guideTop, phone && { height: undefined, minHeight: 120 }]}>
+            {!phone && <Video channel={previewEnabled ? (guideSelected?.c ?? selected) : null} style={styles.guideVideo} />}
             <View style={[styles.panel, { flex: 1, padding: 16, gap: 6 }]}>
               {guideSelected ? (
                 <>
@@ -270,8 +272,8 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
           />
         </View>
       ) : (
-        <View style={{ flex: 1, flexDirection: 'row', gap: 12 }}>
-          <View style={[styles.panel, styles.listCol]}>
+        <View style={{ flex: 1, flexDirection: phone ? 'column-reverse' : 'row', gap: phone ? 8 : 12 }}>
+          <View style={[styles.panel, styles.listCol, phone && { width: undefined, flex: 1 }]}>
             {results ? (
               <>
                 <View style={styles.listHead}><T kind="title" weight="bold">Resultados</T><T kind="label" color={colors.textSecondary}>{results.length}</T></View>
@@ -291,9 +293,9 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
             )}
           </View>
 
-          <View style={{ flex: 1, gap: 12 }}>
+          <View style={phone ? { gap: 8, display: selected ? 'flex' : 'none' } : { flex: 1, gap: 12 }}>
             <View>
-              <Video channel={previewEnabled ? selected : null} style={styles.preview} />
+              <Video channel={previewEnabled ? selected : null} style={[styles.preview, phone && { borderRadius: radius.md }]} />
               {selected && (
                 <View style={styles.previewBadges} pointerEvents="box-none">
                   <View style={styles.badge}><T kind="label" weight="semibold" lines={1}>{selected.number ?? ''} · {selected.name}</T></View>
@@ -307,7 +309,7 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
                 </Pressable>
               )}
             </View>
-            {selected ? (
+            {phone ? null : selected ? (
               <View style={[styles.panel, { padding: 16, gap: 8 }]}>
                 {sel.current ? (
                   <>
@@ -333,7 +335,7 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
                 <T color={colors.textSecondary}>Elige un grupo y luego un canal para verlo aquí. Mantén presionado un canal para abrirlo a pantalla completa.</T>
               </View>
             )}
-            {selected && sel.next.length > 0 && (
+            {!phone && selected && sel.next.length > 0 && (
               <View style={{ gap: 8 }}>
                 <T kind="label" weight="semibold" color={colors.textSecondary} style={{ marginLeft: 4 }}>A CONTINUACIÓN</T>
                 <View style={{ flexDirection: 'row', gap: 12 }}>

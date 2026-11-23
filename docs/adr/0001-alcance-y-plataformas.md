@@ -37,3 +37,12 @@ La especificación inicial pedía nueve plataformas, con Android y Android TV co
 
 - Añadir Android/Android TV si el cliente React Native lo hace casi gratis.
 - Apple TV cuando el cliente iOS sea estable.
+
+## Actualización 2026-11-23
+
+Arturo amplió el alcance. Orden acordado:
+1. iPhone (misma app que el iPad, diseño de una columna con pestañas abajo).
+2. Android teléfonos y tablets (misma app React Native; `.apk` compilado en GitHub Actions con Linux).
+3. Roku (cuando Arturo tenga acceso al equipo para probar).
+4. Android TV y Apple TV juntos (versión TV de React Native, navegación con control remoto).
+Samsung Tizen y LG webOS siguen en el plan después de estas.

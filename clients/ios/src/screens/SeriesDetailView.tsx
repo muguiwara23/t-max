@@ -10,6 +10,7 @@ import { colors, radius } from '../theme';
 import Icon from '../ui/Icon';
 import Poster, { TONES } from '../ui/Poster';
 import { Button, Chip, T } from '../ui/kit';
+import { useIsPhone } from '../ui/layout';
 
 interface Props {
   item: VodItem;
@@ -26,6 +27,7 @@ export default function SeriesDetailView({ item, dataVersion, onBack, onPlay }: 
   const [season, setSeason] = useState<number | null>(null);
   const [fav, setFav] = useState(item.favorite);
   const [version, setVersion] = useState(0);
+  const phone = useIsPhone();
 
   useEffect(() => {
     setErr(null);
@@ -112,10 +114,10 @@ export default function SeriesDetailView({ item, dataVersion, onBack, onPlay }: 
       <View style={styles.header}>
         <Button compact icon="back" label="Series" onPress={onBack} />
       </View>
-      <View style={{ flex: 1, flexDirection: 'row', gap: 12 }}>
-        <ScrollView style={[styles.panel, { width: 400, flexGrow: 0 }]} contentContainerStyle={{ padding: 24, gap: 12 }}>
-          <Poster uri={poster} title={title} width={180} tone={TONES[2]!} />
-          <T kind="display" weight="bold">{title}</T>
+      <View style={{ flex: 1, flexDirection: phone ? 'column' : 'row', gap: phone ? 8 : 12 }}>
+        <ScrollView style={[styles.panel, phone ? { maxHeight: '42%', flexGrow: 0 } : { width: 400, flexGrow: 0 }]} contentContainerStyle={{ padding: phone ? 14 : 24, gap: 12 }}>
+          {!phone && <Poster uri={poster} title={title} width={180} tone={TONES[2]!} />}
+          <T kind={phone ? 'title' : 'display'} weight="bold">{title}</T>
           {meta ? <T kind="label" color={colors.textSecondary}>{meta}</T> : null}
           <View style={styles.actions}>
             {cont && (

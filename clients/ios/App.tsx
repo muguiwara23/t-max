@@ -23,9 +23,11 @@ import VodPlayerScreen from './src/screens/VodPlayerScreen';
 import VodScreen from './src/screens/VodScreen';
 import { colors } from './src/theme';
 import Rail, { type Section } from './src/ui/Rail';
+import { useIsPhone } from './src/ui/layout';
 
 
 export default function App() {
+  const phone = useIsPhone();
   const [fontsLoaded] = useFonts({ Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold });
   const [ready, setReady] = useState(false);
   const [section, setSection] = useState<Section>('live');
@@ -105,8 +107,8 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="light" />
       <SafeAreaView style={styles.root} edges={['top', 'bottom', 'left', 'right']}>
-        <View style={styles.shell}>
-          <Rail section={section} onChange={setSection} />
+        <View style={[styles.shell, phone && styles.shellPhone]}>
+          {phone ? <Rail horizontal section={section} onChange={setSection} /> : <Rail section={section} onChange={setSection} />}
           <View style={{ flex: 1 }}>
             <View style={[styles.fill, section !== 'live' && styles.hidden]}>
               <LiveScreen
@@ -143,6 +145,7 @@ export default function App() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   shell: { flex: 1, flexDirection: 'row', gap: 12, padding: 16 },
+  shellPhone: { flexDirection: 'column-reverse', padding: 8, gap: 8 },
   fill: { flex: 1 },
   hidden: { display: 'none' },
 });

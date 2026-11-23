@@ -26,6 +26,7 @@ import { clock, type VodKind } from '../data/vod-mapping';
 import { colors, font, radius } from '../theme';
 import Icon from '../ui/Icon';
 import Poster, { TONES } from '../ui/Poster';
+import { useIsPhone } from '../ui/layout';
 import { Button, Chip, T } from '../ui/kit';
 import MovieDetailView from './MovieDetailView';
 import SeriesDetailView from './SeriesDetailView';
@@ -43,6 +44,7 @@ interface Props {
 const PAGE = 240;
 const GAP = 12;
 const TARGET_W = 150;
+const TARGET_W_PHONE = 110;
 
 function useClock(): number {
   const [now, setNow] = useState(Date.now());
@@ -176,7 +178,8 @@ export default function VodScreen({ kind, dataVersion, progressVersion, onPlay, 
     )
   ) : null;
 
-  const cols = width > 0 ? Math.max(3, Math.floor((width + GAP) / (TARGET_W + GAP))) : 0;
+  const phone = width > 0 && width < 600;
+  const cols = width > 0 ? Math.max(phone ? 2 : 3, Math.floor((width + GAP) / ((phone ? TARGET_W_PHONE : TARGET_W) + GAP))) : 0;
   const cardW = cols > 0 ? (width - (cols - 1) * GAP) / cols : 0;
   const grid = results ?? items;
   const multi = (sources?.length ?? 0) > 1;
@@ -268,16 +271,17 @@ export default function VodScreen({ kind, dataVersion, progressVersion, onPlay, 
 }
 
 function Header({ title: t, now: n, query: q, setQuery: sq, kind }: { title: string; now: number; query: string; setQuery: (s: string) => void; kind: VodKind }) {
+  const phone = useIsPhone();
   return (
     <View style={styles.header}>
-      <T kind="display" weight="bold">{t}</T>
+      <T kind={phone ? 'title' : 'display'} weight="bold">{t}</T>
       <View style={{ flex: 1 }} />
-      <View style={styles.search}>
+      <View style={[styles.search, phone && { width: undefined, flex: 2 }]}>
         <Icon name="search" size={18} color={colors.textSecondary} />
         <TextInput value={q} onChangeText={sq} placeholder={kind === 'movie' ? 'Buscar película' : 'Buscar serie'} placeholderTextColor={colors.textTertiary}
           autoCapitalize="none" autoCorrect={false} style={styles.searchInput} clearButtonMode="while-editing" />
       </View>
-      <T kind="title" weight="semibold" style={{ fontVariant: ['tabular-nums'] }}>{hhmm(n)}</T>
+      {!phone && <T kind="title" weight="semibold" style={{ fontVariant: ['tabular-nums'] }}>{hhmm(n)}</T>}
     </View>
   );
 }
