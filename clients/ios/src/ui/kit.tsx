@@ -1,6 +1,8 @@
 // Piezas básicas reutilizables con los tokens del diseño.
 import type { ReactNode } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+
+import Pressable from './Press';
 
 import { colors, font, radius, type } from '../theme';
 import Icon, { type IconName } from './Icon';

@@ -1,6 +1,8 @@
 // Ajustes: Fuentes (cada una con sus propios ajustes), Reproductor y subtítulos, Respaldo y Acerca de.
 import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
+
+import Pressable from '../ui/Press';
 
 import { getSetting, setSetting } from '../data/db';
 import { deriveStalkerDeviceIds } from '@tmax/core';
@@ -26,7 +28,7 @@ import { Button, Chip, Switch, T } from '../ui/kit';
 import { SourceSettingsModal, SubStyleEditor } from './SourceSettings';
 import { useIsCompact, useIsPhone } from '../ui/layout';
 
-export const APP_VERSION = '0.5.2';
+export const APP_VERSION = '0.6.0';
 
 type Cat = 'sources' | 'player' | 'backup' | 'diag' | 'about';
 const CATS: { id: Cat | 'soon'; name: string }[] = [
@@ -421,7 +423,7 @@ function SourceForm({ visible, source, onClose, onSaved }: { visible: boolean; s
 
   return (
     <Modal visible={visible} transparent animationType="fade" supportedOrientations={['landscape', 'portrait']} onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior="padding" style={styles.modalBack}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalBack}>
         <View style={styles.modal}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <T kind="title" weight="bold" style={{ flex: 1 }}>{source ? 'Editar fuente' : 'Agregar fuente'}</T>

@@ -1,7 +1,7 @@
 // DVR: grabando ahora, programadas y terminadas. Las grabaciones MP4 pasan solas a la galería de Fotos.
 import * as Sharing from 'expo-sharing';
 import { useEffect, useState } from 'react';
-import { Alert, FlatList, Linking, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, Linking, Platform, StyleSheet, View } from 'react-native';
 
 import { getSetting, setSetting } from '../data/db';
 import { cancelRecording, deleteRecording, listRecordings, retrySaveToPhotos, type Recording } from '../data/dvr';
@@ -76,7 +76,7 @@ export default function DvrScreen({ dataVersion, onPlay }: { dataVersion: number
     <View style={{ flex: 1, gap: 12 }}>
       <View style={styles.header}>
         <T kind="display" weight="bold" style={{ flex: 1 }}>DVR</T>
-        <Button compact icon="movies" label="Abrir Fotos" onPress={() => Linking.openURL('photos-redirect://').catch(() => {})} />
+        {Platform.OS === 'ios' && <Button compact icon="movies" label="Abrir Fotos" onPress={() => Linking.openURL('photos-redirect://').catch(() => {})} />}
       </View>
       <View style={[styles.panel, styles.note]}>
         <View style={{ flex: 1, gap: 4 }}>

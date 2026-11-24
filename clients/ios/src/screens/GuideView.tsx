@@ -1,6 +1,8 @@
 // Guía por canales: filas = canales, eje horizontal = tiempo, línea lima = ahora.
 import { memo, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
+
+import Pressable from '../ui/Press';
 
 import { hhmm, layoutGuideRow, type ProgrammeRow } from '../data/mapping';
 import type { ChannelItem } from '../data/queries';

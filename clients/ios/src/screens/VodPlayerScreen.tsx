@@ -3,7 +3,9 @@ import { ExpoMpvView, type ExpoMpvViewRef, type PlaybackState, type TrackInfo } 
 import { useKeepAwake } from 'expo-keep-awake';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { PanResponder, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { PanResponder, Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+
+import Pressable from '../ui/Press';
 import { redact } from '@tmax/core';
 
 import { settingsFor, subPropsFor } from '../data/prefs';
@@ -13,6 +15,7 @@ import { colors, radius } from '../theme';
 import Icon, { type IconName } from '../ui/Icon';
 import { Button, T } from '../ui/kit';
 import StreamInfo, { useStreamFacts } from '../ui/StreamInfo';
+import { useBack } from '../ui/back';
 import { useIsCompact } from '../ui/layout';
 
 interface Props {
@@ -140,6 +143,11 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
     onClose();
   };
 
+  useBack(true, () => {
+    if (panel !== 'none') setPanel('none');
+    else void close();
+  });
+
   const goNext = async () => {
     if (!next) return;
     await save();
@@ -209,6 +217,7 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
         style={StyleSheet.absoluteFill}
         source={url}
         startPosition={start}
+        pictureInPictureEnabled={Platform.OS === 'android'}
         metadata={{ title: item.subtitle ? `${item.title} · ${item.subtitle}` : item.title, artwork: item.poster ?? undefined }}
         onPlaybackStateChange={({ nativeEvent }) => {
           setState(nativeEvent.state);
@@ -310,6 +319,7 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
                 <Icon name={state === 'paused' ? 'play' : 'pause'} size={28} color={colors.onAccent} />
               </Pressable>
               <Ctl compact={compact} icon="forward" label="Adelante 30 segundos" caption="30" big onPress={() => seekBy(30)} />
+              {Platform.OS === 'android' && <Ctl compact={compact} icon="expand" label="Imagen en imagen" onPress={() => void mpv.current?.enterPictureInPicture().catch(() => {})} />}
               <View style={{ width: 16 }} />
               {next ? (
                 <Pressable accessibilityLabel="Siguiente episodio" onPress={goNext} style={styles.nextBtn}>

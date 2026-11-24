@@ -4,7 +4,9 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { StatusBar } from 'expo-status-bar';
 import type { File } from 'expo-file-system';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, AppState, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, AppState, FlatList, Platform, StyleSheet, View } from 'react-native';
+
+import Pressable from '../ui/Press';
 
 import { createManualRecording, scheduleRecording, updateRecording } from '../data/dvr';
 import { PAD_AFTER_MS } from '../data/dvr-model';
@@ -12,6 +14,7 @@ import { addReminder } from '../data/reminders';
 import { releaseFromPlayer, setPlayerRecorder } from '../dvr/bus';
 import { startWriting, stopWriting, verifyOrFallback } from '../dvr/record';
 import StreamInfo, { useStreamFacts } from '../ui/StreamInfo';
+import { useBack } from '../ui/back';
 import { useIsCompact } from '../ui/layout';
 
 import { hhmm, type ProgrammeRow } from '../data/mapping';
@@ -186,6 +189,14 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
     };
   }, []);
 
+  useBack(true, () => {
+    if (panel !== 'none') setPanel('none');
+    else {
+      void stopRec();
+      onClose(channel);
+    }
+  });
+
   const go = (d: number) => {
     if (recRef.current) void stopRec();
     setIndex((i) => (i + d + list.length) % list.length);
@@ -348,6 +359,7 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
               <Ctl compact={compact} icon="next" label="Canal siguiente" big onPress={() => { go(1); poke(); }} />
               <View style={{ width: 16 }} />
               <Ctl compact={compact} icon="list" label="Lista de canales" onPress={() => { setPanel((p) => (p === 'channels' ? 'none' : 'channels')); poke(); }} />
+              {Platform.OS === 'android' && <Ctl compact={compact} icon="expand" label="Imagen en imagen" onPress={() => video.current?.pip()} />}
               <Ctl compact={compact} icon="dvr" label={rec ? 'Detener grabación' : 'Grabar'} active={!!rec} onPress={() => { if (rec) void stopRec(); else nowActions(); poke(); }} />
             </View>
           </View>
@@ -357,7 +369,7 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
   );
 }
 
-function Ctl({ compact, icon, label, onPress, big, active }: { compact?: boolean; icon: 'subtitles' | 'audio' | 'prev' | 'next' | 'list' | 'dvr'; label: string; onPress: () => void; big?: boolean; active?: boolean }) {
+function Ctl({ compact, icon, label, onPress, big, active }: { compact?: boolean; icon: 'subtitles' | 'audio' | 'prev' | 'next' | 'list' | 'dvr' | 'expand'; label: string; onPress: () => void; big?: boolean; active?: boolean }) {
   const s = compact ? (big ? 46 : 40) : big ? 60 : 52;
   return (
     <Pressable accessibilityLabel={label} onPress={onPress} style={[styles.ctl, { width: s, height: s, borderRadius: s / 2 }, active && { backgroundColor: colors.live }]}>

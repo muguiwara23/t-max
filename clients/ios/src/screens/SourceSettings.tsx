@@ -1,6 +1,6 @@
 // Ajustes propios de una fuente y editor de estilo de subtítulos (general o por fuente).
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Modal, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Modal, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { invalidatePlaybackCache } from '../data/playback';
 import { getGlobalSubStyle } from '../data/prefs';
@@ -82,7 +82,7 @@ export function SourceSettingsModal({ source, onClose, onSaved }: { source: Sour
 
   return (
     <Modal visible transparent animationType="fade" supportedOrientations={['landscape', 'portrait']} onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior="padding" style={styles.back}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.back}>
         <View style={styles.modal}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View style={{ flex: 1 }}>

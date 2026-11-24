@@ -1,7 +1,9 @@
 // Lista de grupos con modo edición: mostrar/ocultar (persiste entre actualizaciones) y orden
 // por lista, por nombre o manual. Las preferencias viven en user_groups / settings, no en la fuente.
 import { useEffect, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
+
+import Pressable from '../ui/Press';
 
 import { moveItem, type GroupSortMode } from '../data/mapping';
 import {

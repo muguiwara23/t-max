@@ -1,6 +1,8 @@
 // TV en vivo: una sola lista (Grupos → canales → Atrás), vista previa y guía por canales.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, FlatList, Image, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+
+import Pressable from '../ui/Press';
 
 import { scheduleRecording, scheduledKeys } from '../data/dvr';
 import { addReminder, reminderId, reminderKeys, removeReminder } from '../data/reminders';
@@ -23,6 +25,7 @@ import { colors, font, radius } from '../theme';
 import Icon from '../ui/Icon';
 import { Button, T } from '../ui/kit';
 import Video from '../ui/Video';
+import { useBack } from '../ui/back';
 import { useIsCompact, useIsPhone } from '../ui/layout';
 import GroupsList from './GroupsList';
 import GuideView from './GuideView';
@@ -162,6 +165,12 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
 
   const sel = selected ? nowNext(selected.key) : { current: undefined, next: [] as ProgrammeRow[] };
   const empty = sources.length === 0 || (filter === null && allGroup !== null && allGroup.count === 0);
+
+  useBack(previewEnabled && (!!group || !!query || mode === 'guide'), () => {
+    if (query) setQuery('');
+    else if (mode === 'guide') setMode('list');
+    else setGroup(null);
+  });
 
   const openFull = (c: ChannelItem, opts?: { autoRecord?: { until: number | null } }) => {
     const list = visible.length ? visible : [c];

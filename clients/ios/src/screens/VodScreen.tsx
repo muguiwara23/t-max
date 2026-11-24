@@ -1,7 +1,9 @@
 // Películas o Series: pestañas por fuente, "Continuar viendo", categorías, cuadrícula de pósters y búsqueda.
 // Una sola columna de navegación: catálogo → ficha → Atrás.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, FlatList, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, FlatList, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+
+import Pressable from '../ui/Press';
 
 import { getSetting, setSetting } from '../data/db';
 import { hhmm } from '../data/mapping';
@@ -27,6 +29,7 @@ import { colors, font, radius } from '../theme';
 import Icon from '../ui/Icon';
 import Poster, { TONES } from '../ui/Poster';
 import { useIsCompact, useIsPhone } from '../ui/layout';
+import { useBack } from '../ui/back';
 import { Button, Chip, T } from '../ui/kit';
 import MovieDetailView from './MovieDetailView';
 import SeriesDetailView from './SeriesDetailView';
@@ -163,6 +166,8 @@ export default function VodScreen({ kind, dataVersion, progressVersion, onPlay, 
       },
     ]);
   };
+
+  useBack(!!detail, () => back());
 
   const back = () => {
     if (detail) refreshItem(detail.key).catch(() => {});

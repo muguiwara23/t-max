@@ -1,7 +1,7 @@
 // Vista de video con libmpv: resuelve la URL del canal (directo contra la fuente) y la reproduce.
 import { ExpoMpvView, type ExpoMpvViewRef, type MediaInfo, type PlaybackState, type ProgressEvent, type TrackInfo } from 'expo-mpv';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { redact } from '@tmax/core';
 
 import { resolvePlayback, type PlaybackTarget } from '../data/playback';
@@ -24,6 +24,8 @@ export interface VideoHandle {
   /** Cambiar una propiedad de mpv (p. ej. stream-record para grabar). */
   setProp(name: string, value: string): Promise<void>;
   media(): Promise<MediaInfo | null>;
+  /** Android: imagen en imagen. */
+  pip(): void;
 }
 
 interface Props {
@@ -64,6 +66,7 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
       await mpv.current?.setPropertyString(name, value);
     },
     media: async () => (await mpv.current?.getMediaInfo().catch(() => null)) ?? null,
+    pip: () => void mpv.current?.enterPictureInPicture().catch(() => {}),
   }));
 
   const target = useRef<PlaybackTarget | null>(null);
@@ -187,6 +190,7 @@ const Video = forwardRef<VideoHandle, Props>(function Video({ channel, style, on
         style={StyleSheet.absoluteFill}
         source={source}
         muted={muted}
+        pictureInPictureEnabled={Platform.OS === 'android' && !bare}
         onProgress={onProgress ? ({ nativeEvent }) => onProgress(nativeEvent) : undefined}
         onPlaybackStateChange={({ nativeEvent }) => {
           setState(nativeEvent.state);

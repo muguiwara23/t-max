@@ -1,7 +1,9 @@
 // Ficha de serie: temporadas, episodios con su avance y "Continuar T·E". Datos del proveedor al abrirla.
 import type { Episode, SeriesDetail } from '@tmax/core';
 import { useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { FlatList, ScrollView, StyleSheet, View } from 'react-native';
+
+import Pressable from '../ui/Press';
 
 import { humanError } from '../data/sync';
 import { seriesDetail, setWatched, toggleVodFavorite, userVodFor, type UserVod, type VodItem, type VodPlayItem, type VodPlayRequest } from '../data/vod';

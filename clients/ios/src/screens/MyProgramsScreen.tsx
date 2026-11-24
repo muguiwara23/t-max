@@ -1,6 +1,8 @@
 // Mis programas: lo que guardaste desde la guía. El iPad avisa un minuto antes y al tocar el aviso abre el canal.
 import { useEffect, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, View } from 'react-native';
+
+import Pressable from '../ui/Press';
 
 import { hhmm } from '../data/mapping';
 import { getChannelByKey, type ChannelItem } from '../data/queries';

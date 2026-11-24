@@ -24,6 +24,7 @@ import VodScreen from './src/screens/VodScreen';
 import { colors } from './src/theme';
 import Rail, { type Section } from './src/ui/Rail';
 import { useIsCompact, useIsPhone } from './src/ui/layout';
+import { useBack } from './src/ui/back';
 
 
 export default function App() {
@@ -36,6 +37,8 @@ export default function App() {
   const [player, setPlayer] = useState<{ list: ChannelItem[]; index: number; autoRecord?: { until: number | null } } | null>(null);
   const [firstRun, setFirstRun] = useState(false);
   const [vodPlayer, setVodPlayer] = useState<VodPlayRequest | null>(null);
+  // Android: Atrás fuera de TV en vivo regresa a TV en vivo (las pantallas internas responden antes).
+  useBack(section !== 'live', () => setSection('live'));
   const [progressVersion, setProgressVersion] = useState(0);
   const [liveFocus, setLiveFocus] = useState<{ channel: ChannelItem; n: number } | null>(null);
   const [dvrVersion, setDvrVersion] = useState(0);

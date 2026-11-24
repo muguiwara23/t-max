@@ -2,7 +2,7 @@
   "expo": {
     "name": "T-Max",
     "slug": "t-max",
-    "version": "0.5.2",
+    "version": "0.6.0",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -11,7 +11,7 @@
       "supportsTablet": true,
       "requireFullScreen": true,
       "bundleIdentifier": "com.muguiwara23.tmax",
-      "buildNumber": "15",
+      "buildNumber": "16",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
@@ -30,6 +30,10 @@
         {
           "ios": {
             "deploymentTarget": "16.4"
+          },
+          "android": {
+            "usesCleartextTraffic": true,
+            "minSdkVersion": 24
           }
         }
       ],
@@ -51,7 +55,22 @@
           "savePhotosPermission": "T-Max guarda tus grabaciones del DVR en la galería de Fotos.",
           "isAccessMediaLocationEnabled": false
         }
+      ],
+      "./plugins/android-tv"
+    ],
+    "android": {
+      "package": "com.muguiwara23.tmax",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0A0B0D"
+      },
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.WAKE_LOCK"
       ]
-    ]
+    }
   }
 }

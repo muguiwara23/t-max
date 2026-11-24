@@ -1,11 +1,17 @@
 // Notificaciones locales del iPad (no pasan por ningún servidor: las programa el propio iOS).
 import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 
 export type NotifData = { type: 'reminder'; channelKey: string } | { type: 'recording'; recordingId: string; channelKey: string };
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
 });
+
+// Android 8+: los avisos necesitan un canal.
+if (Platform.OS === 'android') {
+  Notifications.setNotificationChannelAsync('tmax', { name: 'Mis programas y DVR', importance: Notifications.AndroidImportance.HIGH }).catch(() => {});
+}
 
 export async function ensureNotifyPermission(): Promise<boolean> {
   const cur = await Notifications.getPermissionsAsync();
@@ -21,7 +27,7 @@ export async function notifyAt(at: number, title: string, body: string, data: No
   if (!(await ensureNotifyPermission())) return null;
   return Notifications.scheduleNotificationAsync({
     content: { title, body, data: data as unknown as Record<string, unknown>, sound: true },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(at) },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(at), channelId: 'tmax' },
   });
 }
 
