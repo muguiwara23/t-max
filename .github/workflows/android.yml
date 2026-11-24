@@ -39,7 +39,7 @@ jobs:
       - run: npm test
       - name: Preparar proyecto Android (expo prebuild)
         run: npx expo prebuild --platform android --no-install
-      - name: Compilar (release firmado con la llave de depuración: se instala directo)
+      - name: "Compilar (release firmado con la llave de depuración, se instala directo)"
         working-directory: clients/ios/android
         run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=armeabi-v7a,arm64-v8a
       - name: Renombrar
