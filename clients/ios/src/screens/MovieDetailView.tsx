@@ -9,7 +9,7 @@ import { clock, humanDuration, resumeFrom } from '../data/vod-mapping';
 import { colors, radius } from '../theme';
 import Poster, { TONES } from '../ui/Poster';
 import { Button, T } from '../ui/kit';
-import { useIsPhone } from '../ui/layout';
+import { useIsCompact, useIsPhone } from '../ui/layout';
 
 interface Props {
   item: VodItem;
@@ -25,6 +25,7 @@ export default function MovieDetailView({ item, dataVersion, onBack, onPlay }: P
   const [fav, setFav] = useState(item.favorite);
   const [version, setVersion] = useState(0);
   const phone = useIsPhone();
+  const compact = useIsCompact();
 
   useEffect(() => {
     setErr(null);
@@ -75,10 +76,10 @@ export default function MovieDetailView({ item, dataVersion, onBack, onPlay }: P
       </View>
       <View style={[styles.panel, { flex: 1 }]}>
         {d?.backdrop ? <Image source={{ uri: d.backdrop }} style={[StyleSheet.absoluteFill, { opacity: 0.18 }]} resizeMode="cover" /> : null}
-        <ScrollView contentContainerStyle={[styles.body, phone && { flexDirection: 'column', padding: 16, gap: 16 }]}>
-          <Poster uri={poster} title={title} width={phone ? 140 : 220} tone={TONES[1]!} />
+        <ScrollView contentContainerStyle={[styles.body, phone && { flexDirection: 'column', padding: 16, gap: 16 }, compact && !phone && { padding: 16, gap: 16 }]}>
+          <Poster uri={poster} title={title} width={phone || compact ? 130 : 220} tone={TONES[1]!} />
           <View style={phone ? { gap: 12 } : { flex: 1, gap: 12 }}>
-            <T kind={phone ? 'title' : 'display'} weight="bold">{title}</T>
+            <T kind={phone || compact ? 'title' : 'display'} weight="bold">{title}</T>
             {meta ? <T color={colors.textSecondary}>{meta}</T> : null}
             {u && !u.completed && u.duration > 0 && u.position > 30 && (
               <View style={{ gap: 6, maxWidth: 420 }}>

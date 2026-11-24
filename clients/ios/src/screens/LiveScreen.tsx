@@ -23,7 +23,7 @@ import { colors, font, radius } from '../theme';
 import Icon from '../ui/Icon';
 import { Button, T } from '../ui/kit';
 import Video from '../ui/Video';
-import { useIsPhone } from '../ui/layout';
+import { useIsCompact, useIsPhone } from '../ui/layout';
 import GroupsList from './GroupsList';
 import GuideView from './GuideView';
 
@@ -50,6 +50,7 @@ function useClock(): number {
 export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, onOpenSettings, focus }: Props) {
   const now = useClock();
   const phone = useIsPhone();
+  const compact = useIsCompact();
   const [mode, setMode] = useState<'list' | 'guide'>('list');
   const [sources, setSources] = useState<Source[]>([]);
   const [filter, setFilterState] = useState<SourceFilter>(null);
@@ -192,9 +193,9 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
   }, [guideSel, guideChannels, programmes]);
 
   return (
-    <View style={{ flex: 1, gap: 12 }}>
-      <View style={styles.header}>
-        <T kind={phone ? 'title' : 'display'} weight="bold">{phone ? 'En vivo' : 'TV en vivo'}</T>
+    <View style={{ flex: 1, gap: compact ? 6 : 12 }}>
+      <View style={[styles.header, compact && { height: 44 }]}>
+        <T kind={phone || compact ? 'title' : 'display'} weight="bold">{phone || compact ? 'En vivo' : 'TV en vivo'}</T>
         <View style={styles.segment}>
           <Pressable onPress={() => setMode('list')} style={[styles.segBtn, mode === 'list' && styles.segOn]}>
             <T kind="label" weight="bold" color={mode === 'list' ? colors.text : colors.textSecondary}>Lista</T>
@@ -204,12 +205,12 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
           </Pressable>
         </View>
         <View style={{ flex: 1 }} />
-        <View style={[styles.search, phone && { width: undefined, flex: 2 }]}>
+        <View style={[styles.search, (phone || compact) && { width: undefined, flex: 2 }, compact && { height: 36 }]}>
           <Icon name="search" size={18} color={colors.textSecondary} />
           <TextInput value={query} onChangeText={setQuery} placeholder="Buscar canal o número" placeholderTextColor={colors.textTertiary}
             autoCapitalize="none" autoCorrect={false} style={styles.searchInput} />
         </View>
-        {!phone && <T kind="title" weight="semibold" style={{ fontVariant: ['tabular-nums'] }}>{hhmm(now)}</T>}
+        {!phone && !compact && <T kind="title" weight="semibold" style={{ fontVariant: ['tabular-nums'] }}>{hhmm(now)}</T>}
       </View>
 
       {sources.length > 1 && (
@@ -231,7 +232,7 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
         </View>
       ) : mode === 'guide' ? (
         <View style={{ flex: 1, gap: 12 }}>
-          <View style={[styles.guideTop, phone && { height: undefined, minHeight: 120 }]}>
+          <View style={[styles.guideTop, phone && { height: undefined, minHeight: 120 }, compact && { display: 'none' }]}>
             {!phone && <Video channel={previewEnabled ? (guideSelected?.c ?? selected) : null} style={styles.guideVideo} />}
             <View style={[styles.panel, { flex: 1, padding: 16, gap: 6 }]}>
               {guideSelected ? (
@@ -266,18 +267,24 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
             selected={guideSel}
             onShift={(h) => setGuideStart((s) => s + h * 3600000)}
             onSelect={(c, p) => {
+              if (compact) {
+                // iPhone: tocar un programa = ver el canal o sus opciones, sin panel arriba.
+                if (!p || (p.start <= now && p.end > now)) openFull(c);
+                else programmeActions(c, p);
+                return;
+              }
               setGuideSel(p ? { key: c.key, start: p.start } : { key: c.key, start: -1 });
               if (!p || (p.start <= now && p.end > now)) setSelected(c);
             }}
           />
         </View>
       ) : (
-        <View style={{ flex: 1, flexDirection: phone ? 'column-reverse' : 'row', gap: phone ? 8 : 12 }}>
-          <View style={[styles.panel, styles.listCol, phone && { width: undefined, flex: 1 }]}>
+        <View style={{ flex: 1, flexDirection: phone ? 'column-reverse' : 'row', gap: phone || compact ? 8 : 12 }}>
+          <View style={[styles.panel, styles.listCol, (phone || compact) && { width: undefined, flex: 1 }]}>
             {results ? (
               <>
                 <View style={styles.listHead}><T kind="title" weight="bold">Resultados</T><T kind="label" color={colors.textSecondary}>{results.length}</T></View>
-                <ChannelList channels={results} selectedKey={selected?.key} nowNext={nowNext} onPick={setSelected} onLong={openFull} />
+                <ChannelList channels={results} selectedKey={selected?.key} nowNext={nowNext} onPick={compact ? openFull : setSelected} onLong={openFull} />
               </>
             ) : group ? (
               <>
@@ -286,14 +293,14 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
                   <T kind="title" weight="bold" lines={1} style={{ flex: 1, marginLeft: 8 }}>{group.name}</T>
                   <T kind="label" color={colors.textSecondary}>{channels.length}</T>
                 </View>
-                <ChannelList channels={channels} selectedKey={selected?.key} nowNext={nowNext} onPick={setSelected} onLong={openFull} />
+                <ChannelList channels={channels} selectedKey={selected?.key} nowNext={nowNext} onPick={compact ? openFull : setSelected} onLong={openFull} />
               </>
             ) : (
               <GroupsList filter={filter} dataVersion={dataVersion + localVersion} onOpen={setGroup} onChanged={() => setLocalVersion((v) => v + 1)} />
             )}
           </View>
 
-          <View style={phone ? { gap: 8, display: selected ? 'flex' : 'none' } : { flex: 1, gap: 12 }}>
+          <View style={compact ? { display: 'none' } : phone ? { gap: 8, display: selected ? 'flex' : 'none' } : { flex: 1, gap: 12 }}>
             <View>
               <Video channel={previewEnabled ? selected : null} style={[styles.preview, phone && { borderRadius: radius.md }]} />
               {selected && (

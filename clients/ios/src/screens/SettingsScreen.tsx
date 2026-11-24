@@ -24,9 +24,9 @@ import { refreshSource } from '../data/sync';
 import { colors, font, radius } from '../theme';
 import { Button, Chip, Switch, T } from '../ui/kit';
 import { SourceSettingsModal, SubStyleEditor } from './SourceSettings';
-import { useIsPhone } from '../ui/layout';
+import { useIsCompact, useIsPhone } from '../ui/layout';
 
-export const APP_VERSION = '0.5.1';
+export const APP_VERSION = '0.5.2';
 
 type Cat = 'sources' | 'player' | 'backup' | 'diag' | 'about';
 const CATS: { id: Cat | 'soon'; name: string }[] = [
@@ -50,7 +50,9 @@ function ago(ms: number | null): string {
 }
 
 export default function SettingsScreen({ onDataChanged, startWithAdd }: { onDataChanged: () => void; startWithAdd?: boolean }) {
-  const phone = useIsPhone();
+  const isPhone = useIsPhone();
+  const isCompact = useIsCompact();
+  const phone = isPhone || isCompact;
   const [cat, setCat] = useState<Cat>('sources');
   const [sources, setSources] = useState<Source[]>([]);
   const [busy, setBusy] = useState<Record<string, string>>({});
@@ -155,7 +157,7 @@ export default function SettingsScreen({ onDataChanged, startWithAdd }: { onData
   return (
     <View style={{ flex: 1, gap: 12 }}>
       <View style={styles.header}><T kind="display" weight="bold">Ajustes</T></View>
-      <View style={{ flex: 1, flexDirection: phone ? 'column' : 'row', gap: phone ? 8 : 12 }}>
+      <View style={{ flex: 1, flexDirection: phone ? 'column' : 'row', gap: phone ? 6 : 12 }}>
         {phone && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}>
             {CATS.filter((c) => c.id !== 'soon').map((c) => <Chip key={c.name} label={c.name} active={c.id === cat} onPress={() => setCat(c.id as Cat)} />)}

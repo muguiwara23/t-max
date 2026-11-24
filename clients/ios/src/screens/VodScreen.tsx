@@ -26,7 +26,7 @@ import { clock, type VodKind } from '../data/vod-mapping';
 import { colors, font, radius } from '../theme';
 import Icon from '../ui/Icon';
 import Poster, { TONES } from '../ui/Poster';
-import { useIsPhone } from '../ui/layout';
+import { useIsCompact, useIsPhone } from '../ui/layout';
 import { Button, Chip, T } from '../ui/kit';
 import MovieDetailView from './MovieDetailView';
 import SeriesDetailView from './SeriesDetailView';
@@ -271,7 +271,9 @@ export default function VodScreen({ kind, dataVersion, progressVersion, onPlay, 
 }
 
 function Header({ title: t, now: n, query: q, setQuery: sq, kind }: { title: string; now: number; query: string; setQuery: (s: string) => void; kind: VodKind }) {
-  const phone = useIsPhone();
+  const isPhone = useIsPhone();
+  const isCompact = useIsCompact();
+  const phone = isPhone || isCompact;
   return (
     <View style={styles.header}>
       <T kind={phone ? 'title' : 'display'} weight="bold">{t}</T>

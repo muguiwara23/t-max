@@ -14,18 +14,28 @@ const ITEMS: { id: Section; label: string; icon: IconName }[] = [
   { id: 'dvr', label: 'DVR', icon: 'dvr' },
 ];
 
-function Item({ id, label, icon, active, onPress }: { id: Section; label: string; icon: IconName; active: boolean; onPress: (s: Section) => void }) {
+function Item({ id, label, icon, active, onPress, compact }: { id: Section; label: string; icon: IconName; active: boolean; onPress: (s: Section) => void; compact?: boolean }) {
   const fg = active ? colors.onAccent : colors.textSecondary;
   return (
     <Pressable accessibilityRole="tab" accessibilityState={{ selected: active }} onPress={() => onPress(id)}
-      style={[styles.item, active && { backgroundColor: colors.accent }]}>
-      <Icon name={icon} size={22} color={fg} />
+      style={[styles.item, compact && styles.itemCompact, active && { backgroundColor: colors.accent }]}>
+      <Icon name={icon} size={compact ? 18 : 22} color={fg} />
       <T kind="caption" weight="bold" color={fg} style={{ fontSize: 10, lineHeight: 12 }}>{label}</T>
     </Pressable>
   );
 }
 
-export default function Rail({ section, onChange, horizontal }: { section: Section; onChange: (s: Section) => void; horizontal?: boolean }) {
+export default function Rail({ section, onChange, horizontal, compact }: { section: Section; onChange: (s: Section) => void; horizontal?: boolean; compact?: boolean }) {
+  if (compact) {
+    // iPhone acostado: barra delgada sin logo; caben las 6 secciones (Ajustes incluido).
+    return (
+      <View style={styles.railCompact}>
+        {ITEMS.map((it) => <Item key={it.id} {...it} compact active={section === it.id} onPress={onChange} />)}
+        <View style={{ flex: 1 }} />
+        <Item id="settings" label="Ajustes" icon="settings" compact active={section === 'settings'} onPress={onChange} />
+      </View>
+    );
+  }
   if (horizontal) {
     // Teléfono: pestañas abajo.
     return (
@@ -51,6 +61,8 @@ export default function Rail({ section, onChange, horizontal }: { section: Secti
 const styles = StyleSheet.create({
   rail: { width: 76, backgroundColor: colors.panel, borderRadius: radius.lg, alignItems: 'center', paddingVertical: 16, gap: 6 },
   logo: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  railCompact: { width: 60, backgroundColor: colors.panel, borderRadius: radius.md, alignItems: 'center', paddingVertical: 6, gap: 2 },
+  itemCompact: { width: 52, height: 46, gap: 1 },
   tabs: { height: 66, flexDirection: 'row', backgroundColor: colors.panel, borderRadius: radius.lg, paddingHorizontal: 4, alignItems: 'center' },
   item: { width: 64, height: 60, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', gap: 3 },
 });
