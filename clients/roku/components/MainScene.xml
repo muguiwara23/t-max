@@ -1,40 +1,180 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- T-Max en Roku: barra lateral, una sola lista (Grupos → canales → Atrás) y video a pantalla completa. -->
+<!-- T-Max en Roku, con el mismo diseño que la app de iPhone/iPad:
+     barra lateral con íconos, lista a la izquierda y vista previa + guía (TV en vivo),
+     portadas (Películas/Series), ficha, reproductor con menú de audio y subtítulos,
+     y Ajustes con la página para configurar desde el celular. -->
 <component name="MainScene" extends="Scene">
   <children>
     <Rectangle width="1920" height="1080" color="0x0A0B0DFF" />
-    <Rectangle translation="[48,48]" width="240" height="984" color="0x14161AFF" />
-    <Label translation="[80,76]" text="T-Max" color="0xD7F36AFF">
-      <Font role="font" uri="font:BoldSystemFontFile" size="40" />
+
+    <!-- barra lateral -->
+    <Poster uri="pkg:/images/round.9.png" translation="[24,24]" width="168" height="1032" blendColor="0x14161AFF" />
+    <Label translation="[24,44]" width="168" height="60" horizAlign="center" vertAlign="center" text="T-Max" color="0xD7F36AFF">
+      <Font role="font" uri="font:BoldSystemFontFile" size="34" />
     </Label>
-    <LabelList id="rail" translation="[64,170]" itemSize="[208,72]" numRows="6"
-      color="0xA4AAB4FF" focusedColor="0x0A0B0DFF" focusBitmapBlendColor="0xD7F36AFF">
-      <Font role="font" uri="font:BoldSystemFontFile" size="28" />
-      <Font role="focusedFont" uri="font:BoldSystemFontFile" size="28" />
-    </LabelList>
-    <Label id="title" translation="[336,64]" width="1500" color="0xF4F5F7FF">
-      <Font role="font" uri="font:BoldSystemFontFile" size="46" />
+    <MarkupList id="rail" translation="[40,128]" itemComponentName="RailItem" itemSize="[136,112]" itemSpacing="[0,14]"
+      numRows="4" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus" />
+
+    <!-- encabezado -->
+    <Label id="title" translation="[224,32]" width="1300" height="60" color="0xF4F5F7FF">
+      <Font role="font" uri="font:BoldSystemFontFile" size="44" />
     </Label>
-    <Label id="subtitle" translation="[336,126]" width="1500" color="0xA4AAB4FF">
-      <Font role="font" uri="font:SystemFontFile" size="26" />
+    <Label id="subtitle" translation="[224,92]" width="1300" height="36" color="0xA4AAB4FF">
+      <Font role="font" uri="font:SystemFontFile" size="24" />
     </Label>
-    <Rectangle translation="[320,180]" width="820" height="852" color="0x14161AFF" />
-    <LabelList id="list" translation="[336,196]" itemSize="[788,64]" numRows="12"
-      color="0xF4F5F7FF" focusedColor="0x0A0B0DFF" focusBitmapBlendColor="0xD7F36AFF">
-      <Font role="font" uri="font:SystemFontFile" size="28" />
-      <Font role="focusedFont" uri="font:BoldSystemFontFile" size="28" />
-    </LabelList>
-    <Rectangle translation="[1172,180]" width="700" height="852" color="0x14161AFF" />
-    <Label id="info" translation="[1204,212]" width="636" height="788" wrap="true" lineSpacing="8" color="0xA4AAB4FF">
-      <Font role="font" uri="font:SystemFontFile" size="26" />
+    <Label id="clock" translation="[1676,40]" width="220" height="60" horizAlign="right" color="0xF4F5F7FF">
+      <Font role="font" uri="font:BoldSystemFontFile" size="34" />
     </Label>
-    <Video id="video" width="1920" height="1080" visible="false" />
-    <Rectangle id="hud" translation="[48,48]" width="1824" height="128" color="0x121418E6" visible="false" />
-    <Label id="hudText" translation="[84,64]" width="1752" height="100" wrap="true" color="0xF4F5F7FF" visible="false">
-      <Font role="font" uri="font:BoldSystemFontFile" size="30" />
+
+    <!-- panel izquierdo: grupos, canales, categorías o fuentes -->
+    <Poster id="leftPanel" uri="pkg:/images/round.9.png" translation="[216,140]" width="760" height="916" blendColor="0x14161AFF" />
+    <Label id="listHead" translation="[244,152]" width="700" height="48" vertAlign="center" color="0xA4AAB4FF">
+      <Font role="font" uri="font:BoldSystemFontFile" size="24" />
     </Label>
+    <MarkupList id="list" translation="[228,204]" itemComponentName="RowItem" itemSize="[736,84]" itemSpacing="[0,6]"
+      numRows="9" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus" />
+
+    <!-- TV en vivo: vista previa y guía del canal -->
+    <Group id="liveRight" visible="false">
+      <Poster uri="pkg:/images/round.9.png" translation="[1000,140]" width="896" height="504" blendColor="0x000000FF" />
+      <Label id="previewHint" translation="[1060,140]" width="776" height="504" wrap="true" horizAlign="center" vertAlign="center" color="0x8A9099FF"
+        text="Elige un canal y presiona OK para verlo aquí. OK otra vez = pantalla completa.">
+        <Font role="font" uri="font:SystemFontFile" size="26" />
+      </Label>
+      <Poster uri="pkg:/images/round.9.png" translation="[1000,664]" width="896" height="392" blendColor="0x14161AFF" />
+      <Poster id="nowPill" uri="pkg:/images/round_sm.9.png" translation="[1028,688]" width="112" height="40" blendColor="0x3A4421FF">
+        <Label width="112" height="40" horizAlign="center" vertAlign="center" text="AHORA" color="0xD7F36AFF">
+          <Font role="font" uri="font:BoldSystemFontFile" size="20" />
+        </Label>
+      </Poster>
+      <Label id="nowTime" translation="[1156,688]" width="712" height="40" vertAlign="center" color="0xA4AAB4FF">
+        <Font role="font" uri="font:SystemFontFile" size="24" />
+      </Label>
+      <Label id="nowTitle" translation="[1028,740]" width="840" height="84" wrap="true" maxLines="2" lineSpacing="2" color="0xF4F5F7FF">
+        <Font role="font" uri="font:BoldSystemFontFile" size="34" />
+      </Label>
+      <Rectangle id="progBg" translation="[1028,834]" width="840" height="8" color="0x262A31FF" />
+      <Rectangle id="progFill" translation="[1028,834]" width="0" height="8" color="0xD7F36AFF" />
+      <Label id="nowDesc" translation="[1028,856]" width="840" height="96" wrap="true" maxLines="3" color="0xA4AAB4FF">
+        <Font role="font" uri="font:SystemFontFile" size="22" />
+      </Label>
+      <Label id="nextInfo" translation="[1028,962]" width="840" height="76" wrap="true" maxLines="2" color="0xF4F5F7FF">
+        <Font role="font" uri="font:SystemFontFile" size="22" />
+      </Label>
+    </Group>
+
+    <!-- Películas y Series: portadas -->
+    <Group id="vodRight" visible="false">
+      <MarkupGrid id="grid" translation="[688,148]" itemComponentName="PosterItem" itemSize="[228,412]" itemSpacing="[18,26]"
+        numColumns="5" numRows="2" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus" />
+      <Label id="gridMsg" translation="[688,148]" width="1200" height="840" wrap="true" horizAlign="center" vertAlign="center" color="0x8A9099FF">
+        <Font role="font" uri="font:SystemFontFile" size="28" />
+      </Label>
+    </Group>
+
+    <!-- Ajustes: configurar desde el celular -->
+    <Group id="setRight" visible="false">
+      <Poster uri="pkg:/images/round.9.png" translation="[1000,140]" width="896" height="916" blendColor="0x14161AFF" />
+      <Label translation="[1036,172]" width="820" height="50" text="Configurar desde el celular" color="0xF4F5F7FF">
+        <Font role="font" uri="font:BoldSystemFontFile" size="34" />
+      </Label>
+      <Label id="setSteps" translation="[1036,236]" width="820" height="150" wrap="true" color="0xA4AAB4FF">
+        <Font role="font" uri="font:SystemFontFile" size="26" />
+      </Label>
+      <Poster uri="pkg:/images/round.9.png" translation="[1036,396]" width="820" height="200" blendColor="0x262A31FF" />
+      <Label id="setUrl" translation="[1068,416]" width="760" height="80" vertAlign="center" color="0xD7F36AFF">
+        <Font role="font" uri="font:BoldSystemFontFile" size="44" />
+      </Label>
+      <Label id="setPin" translation="[1068,500]" width="760" height="76" vertAlign="center" color="0xF4F5F7FF">
+        <Font role="font" uri="font:BoldSystemFontFile" size="40" />
+      </Label>
+      <Label id="setInfo" translation="[1036,628]" width="820" height="400" wrap="true" color="0xA4AAB4FF">
+        <Font role="font" uri="font:SystemFontFile" size="24" />
+      </Label>
+    </Group>
+
+    <!-- ficha de película o serie -->
+    <Group id="detail" visible="false">
+      <Poster uri="pkg:/images/round.9.png" translation="[216,140]" width="1680" height="916" blendColor="0x14161AFF" />
+      <Poster uri="pkg:/images/round_sm.9.png" translation="[252,176]" width="360" height="540" blendColor="0x1C1F24FF" />
+      <Poster id="dCover" translation="[252,176]" width="360" height="540" loadDisplayMode="scaleToFill" />
+      <Label id="dTitle" translation="[648,172]" width="1210" height="112" wrap="true" maxLines="2" color="0xF4F5F7FF">
+        <Font role="font" uri="font:BoldSystemFontFile" size="46" />
+      </Label>
+      <Label id="dMeta" translation="[648,290]" width="1210" height="36" color="0xD7F36AFF">
+        <Font role="font" uri="font:SystemFontFile" size="24" />
+      </Label>
+      <Label id="dPlot" translation="[648,336]" width="1210" height="170" wrap="true" maxLines="5" lineSpacing="4" color="0xF4F5F7FF">
+        <Font role="font" uri="font:SystemFontFile" size="24" />
+      </Label>
+      <Label id="dCast" translation="[648,520]" width="1210" height="64" wrap="true" maxLines="2" color="0xA4AAB4FF">
+        <Font role="font" uri="font:SystemFontFile" size="20" />
+      </Label>
+      <MarkupList id="dSeasons" translation="[252,740]" itemComponentName="RowItem" itemSize="[360,68]" itemSpacing="[0,6]"
+        numRows="4" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus" visible="false" />
+      <MarkupList id="dList" translation="[648,612]" itemComponentName="RowItem" itemSize="[620,76]" itemSpacing="[0,8]"
+        numRows="4" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus" />
+    </Group>
+
+    <Video id="video" translation="[1000,140]" width="896" height="504" visible="false" enableUI="false" />
+
+    <!-- controles del video en vivo a pantalla completa -->
+    <Group id="hud" visible="false">
+      <Poster uri="pkg:/images/round.9.png" translation="[32,32]" width="1856" height="112" blendColor="0x121418E6" />
+      <Label id="hudTitle" translation="[72,32]" width="1360" height="112" vertAlign="center" color="0xF4F5F7FF">
+        <Font role="font" uri="font:BoldSystemFontFile" size="38" />
+      </Label>
+      <Poster uri="pkg:/images/round_sm.9.png" translation="[1470,66]" width="150" height="44" blendColor="0x4A1F1FFF">
+        <Poster uri="pkg:/images/round_sm.9.png" translation="[16,16]" width="12" height="12" blendColor="0xFF5A4EFF" />
+        <Label translation="[34,0]" width="104" height="44" vertAlign="center" text="EN VIVO" color="0xFFB4ADFF">
+          <Font role="font" uri="font:BoldSystemFontFile" size="20" />
+        </Label>
+      </Poster>
+      <Label id="hudClock" translation="[1648,32]" width="200" height="112" horizAlign="right" vertAlign="center" color="0xF4F5F7FF">
+        <Font role="font" uri="font:BoldSystemFontFile" size="36" />
+      </Label>
+      <Poster uri="pkg:/images/round.9.png" translation="[32,820]" width="1856" height="228" blendColor="0x121418E6" />
+      <Label id="hudNow" translation="[72,844]" width="1100" height="34" color="0xA4AAB4FF">
+        <Font role="font" uri="font:SystemFontFile" size="24" />
+      </Label>
+      <Label id="hudNowTitle" translation="[72,880]" width="1100" height="56" color="0xF4F5F7FF">
+        <Font role="font" uri="font:BoldSystemFontFile" size="38" />
+      </Label>
+      <Rectangle translation="[72,950]" width="1100" height="8" color="0x262A31FF" />
+      <Rectangle id="hudProg" translation="[72,950]" width="0" height="8" color="0xD7F36AFF" />
+      <Label translation="[72,978]" width="1100" height="40" color="0x8A9099FF"
+        text="Arriba/Abajo = cambiar canal  ·  * = audio y subtítulos  ·  Atrás = salir">
+        <Font role="font" uri="font:SystemFontFile" size="22" />
+      </Label>
+      <Label id="hudNext" translation="[1220,844]" width="630" height="190" wrap="true" maxLines="4" color="0xF4F5F7FF">
+        <Font role="font" uri="font:SystemFontFile" size="26" />
+      </Label>
+    </Group>
+
+    <!-- avisos (conectando, errores) -->
+    <Group id="msgBox" translation="[560,470]" visible="false">
+      <Poster uri="pkg:/images/round.9.png" width="800" height="140" blendColor="0x121418F2" />
+      <Label id="msgText" translation="[32,0]" width="736" height="140" wrap="true" maxLines="3" horizAlign="center" vertAlign="center" color="0xF4F5F7FF">
+        <Font role="font" uri="font:BoldSystemFontFile" size="28" />
+      </Label>
+    </Group>
+
+    <!-- menú de audio y subtítulos -->
+    <Group id="tracks" visible="false">
+      <Poster uri="pkg:/images/round.9.png" translation="[1296,64]" width="592" height="952" blendColor="0x121418F2" />
+      <Label translation="[1328,84]" width="540" height="56" vertAlign="center" text="Audio y subtítulos" color="0xF4F5F7FF">
+        <Font role="font" uri="font:BoldSystemFontFile" size="30" />
+      </Label>
+      <MarkupList id="tList" translation="[1312,148]" itemComponentName="RowItem" itemSize="[560,72]" itemSpacing="[0,6]"
+        numRows="11" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus" />
+    </Group>
+
     <Timer id="watchdog" duration="110" repeat="true" />
     <Timer id="hudTimer" duration="5" />
+    <Timer id="msgTimer" duration="4" />
+    <Timer id="epgTimer" duration="0.4" />
+    <Timer id="catTimer" duration="0.7" />
+    <Timer id="clockTimer" duration="20" repeat="true" />
   </children>
   <script type="text/brightscript" uri="Common.brs" />
   <script type="text/brightscript" uri="MainScene.brs" />

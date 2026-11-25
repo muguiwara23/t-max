@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Portada de película o serie con título, marco lima al enfocar y barra de progreso. -->
+<component name="PosterItem" extends="Group">
+  <interface>
+    <field id="itemContent" type="node" onChange="setContent" />
+    <field id="focusPercent" type="float" onChange="paint" />
+    <field id="gridHasFocus" type="boolean" onChange="paint" />
+  </interface>
+  <children>
+    <Poster id="ring" uri="pkg:/images/ring.9.png" translation="[-8,-8]" width="244" height="358" blendColor="0xD7F36AFF" opacity="0" />
+    <Poster id="ph" uri="pkg:/images/round_sm.9.png" width="228" height="342" blendColor="0x1C1F24FF" />
+    <Label id="phText" translation="[14,0]" width="200" height="342" wrap="true" maxLines="4" horizAlign="center" vertAlign="center" color="0x8A9099FF">
+      <Font role="font" uri="font:BoldSystemFontFile" size="24" />
+    </Label>
+    <Poster id="poster" width="228" height="342" loadDisplayMode="scaleToFill" />
+    <Rectangle id="barBg" translation="[12,322]" width="204" height="8" color="0x000000B3" visible="false" />
+    <Rectangle id="bar" translation="[12,322]" width="0" height="8" color="0xD7F36AFF" visible="false" />
+    <Poster id="done" uri="pkg:/images/round_sm.9.png" translation="[180,12]" width="36" height="36" blendColor="0xD7F36AFF" visible="false">
+      <Poster uri="pkg:/images/ic_check.png" translation="[6,6]" width="24" height="24" blendColor="0x0A0B0DFF" />
+    </Poster>
+    <Label id="title" translation="[0,352]" width="228" height="34" horizAlign="center" color="0xA4AAB4FF">
+      <Font role="font" uri="font:SystemFontFile" size="22" />
+    </Label>
+    <Label id="sub" translation="[0,382]" width="228" height="28" horizAlign="center" color="0x8A9099FF">
+      <Font role="font" uri="font:SystemFontFile" size="20" />
+    </Label>
+  </children>
+  <script type="text/brightscript" uri="PosterItem.brs" />
+</component>

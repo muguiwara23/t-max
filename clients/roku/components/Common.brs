@@ -146,3 +146,60 @@ function FormatFor(url as string, pref as string) as string
     if pref = "m3u8" then return "hls"
     return "ts"
 end function
+
+' ---- tiempo y texto ----
+
+function NowSecs() as integer
+    return CreateObject("roDateTime").AsSeconds()
+end function
+
+function Pad2(n as integer) as string
+    if n < 10 then return "0" + n.ToStr()
+    return n.ToStr()
+end function
+
+' Hora local HH:MM de un instante en segundos (0 = ahora).
+function HhMm(secs as integer) as string
+    d = CreateObject("roDateTime")
+    if secs > 0 then d.FromSeconds(secs)
+    d.ToLocalTime()
+    return Pad2(d.GetHours()) + ":" + Pad2(d.GetMinutes())
+end function
+
+' 754 → "12:34"; 3754 → "1:02:34".
+function Clock(secs as integer) as string
+    if secs < 0 then secs = 0
+    h = Int(secs / 3600)
+    mi = Int((secs mod 3600) / 60)
+    s = secs mod 60
+    if h > 0 then return h.ToStr() + ":" + Pad2(mi) + ":" + Pad2(s)
+    return mi.ToStr() + ":" + Pad2(s)
+end function
+
+function HumanMin(secs as integer) as string
+    if secs <= 0 then return ""
+    mi = Int((secs + 30) / 60)
+    if mi >= 60 then return Int(mi / 60).ToStr() + " h " + Pad2(mi mod 60) + " min"
+    return mi.ToStr() + " min"
+end function
+
+function B64(s as string) as string
+    if s = "" then return ""
+    b = CreateObject("roByteArray")
+    b.FromBase64String(s)
+    return b.ToAsciiString()
+end function
+
+function IntOf(v as dynamic) as integer
+    t = Txt(v)
+    if t = "" then return 0
+    return t.ToInt()
+end function
+
+function FirstIp() as string
+    ips = CreateObject("roDeviceInfo").GetIPAddrs()
+    for each k in ips
+        if ips[k] <> "" then return ips[k]
+    end for
+    return ""
+end function

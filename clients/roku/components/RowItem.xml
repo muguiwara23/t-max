@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fila genérica de lista: número, logo, título, línea secundaria, texto e ícono a la derecha.
+     Campos del ContentNode: title, HDPosterUrl (logo), y los propios num, sub, right, icon, on. -->
+<component name="RowItem" extends="Group">
+  <interface>
+    <field id="itemContent" type="node" onChange="setContent" />
+    <field id="focusPercent" type="float" onChange="paint" />
+    <field id="listHasFocus" type="boolean" onChange="paint" />
+    <field id="width" type="float" onChange="layout" />
+    <field id="height" type="float" onChange="layout" />
+  </interface>
+  <children>
+    <Poster id="bg" uri="pkg:/images/round.9.png" opacity="0" />
+    <Label id="num" horizAlign="right" vertAlign="center">
+      <Font role="font" uri="font:SystemFontFile" size="24" />
+    </Label>
+    <Poster id="logo" loadDisplayMode="scaleToFit" />
+    <Label id="title" vertAlign="center">
+      <Font role="font" uri="font:BoldSystemFontFile" size="28" />
+    </Label>
+    <Label id="sub" vertAlign="center">
+      <Font role="font" uri="font:SystemFontFile" size="22" />
+    </Label>
+    <Label id="right" horizAlign="right" vertAlign="center">
+      <Font role="font" uri="font:SystemFontFile" size="22" />
+    </Label>
+    <Poster id="icon" width="28" height="28" />
+  </children>
+  <script type="text/brightscript" uri="RowItem.brs" />
+</component>

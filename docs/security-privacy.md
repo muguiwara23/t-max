@@ -41,3 +41,10 @@ Ver ADR-0005. Antes de cada commit se revisa que no haya credenciales, dominios 
 
 - PIN local, guardado como hash con sal.
 - Bloquea canales o grupos.
+
+## Roku: página para configurar desde el celular (v0.2)
+
+- El Roku abre un servidor HTTP propio en el puerto 8888, **solo mientras T-Max está abierto** y solo alcanzable desde la red local (no hay proxy ni servidor externo).
+- Sirve una única página para **agregar** fuentes; nunca muestra contraseñas ni URLs guardadas (solo tipo y nombre).
+- Guardar exige el PIN de 4 dígitos que se ve en la TV (Ajustes) y cambia en cada arranque; tras 5 PIN incorrectos se bloquea 1 minuto.
+- HTTP sin cifrar dentro de la red local: quien comparta la Wi-Fi podría ver los datos en tránsito. Es la misma exposición que ya tienen las fuentes Xtream/M3U en `http://`.

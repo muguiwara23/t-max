@@ -1,8 +1,8 @@
 title=T-Max
 subtitle=Reproductor IPTV personal
 major_version=0
-minor_version=1
-build_version=1
+minor_version=2
+build_version=0
 ui_resolutions=fhd
 splash_color=#0A0B0D
 splash_min_time=0

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Botón de la barra lateral: ícono arriba, texto abajo (como en iPad). -->
+<component name="RailItem" extends="Group">
+  <interface>
+    <field id="itemContent" type="node" onChange="setContent" />
+    <field id="focusPercent" type="float" onChange="draw" />
+    <field id="listHasFocus" type="boolean" onChange="draw" />
+    <field id="width" type="float" />
+    <field id="height" type="float" />
+  </interface>
+  <children>
+    <Poster id="bg" uri="pkg:/images/round.9.png" width="128" height="112" translation="[4,0]" opacity="0" />
+    <Poster id="icon" width="44" height="44" translation="[46,18]" />
+    <Label id="label" translation="[4,70]" width="128" horizAlign="center">
+      <Font role="font" uri="font:BoldSystemFontFile" size="22" />
+    </Label>
+  </children>
+  <script type="text/brightscript" uri="RailItem.brs" />
+</component>

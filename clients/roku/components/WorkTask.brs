@@ -6,7 +6,7 @@ end sub
 
 sub work()
     req = m.top.request
-    out = { ok: false, kind: req.kind, error: "" }
+    out = { ok: false, kind: req.kind, error: "", tag: req.tag }
     try
         src = req.src
         if req.kind = "groups" then
@@ -21,6 +21,18 @@ sub work()
             channels(src, req.group, out)
         else if req.kind = "link" then
             stalkerLink(src, req.cmd, out)
+        else if req.kind = "epg" then
+            epg(src, req.ch, out)
+        else if req.kind = "vodCats" then
+            vodCats(src, req.vod, out)
+        else if req.kind = "vodList" then
+            vodList(src, req.vod, req.cat, out)
+        else if req.kind = "vodSearch" then
+            vodSearch(src, req.vod, req.q, out)
+        else if req.kind = "movieInfo" then
+            movieInfo(src, req.id, out)
+        else if req.kind = "seriesInfo" then
+            seriesInfo(src, req.id, out)
         else if req.kind = "watchdog" then
             t = stalkerToken(src, false)
             if t <> "" then HttpGet(StalkerApi(src.server) + "?type=watchdog&action=get_events&event_active_id=0&init=0&cur_play_type=1&JsHttpRequest=1-xml", StalkerHeaders(src, t), 15000)
@@ -228,7 +240,7 @@ sub stalkerLoad(src as object, out as object)
     for each c in data
         gid = Txt(c.tv_genre_id)
         if not by.DoesExist(gid) then by[gid] = []
-        by[gid].push({ n: Txt(c.name), num: Txt(c.number), cmd: Txt(c.cmd), logo: Txt(c.logo) })
+        by[gid].push({ n: Txt(c.name), num: Txt(c.number), cmd: Txt(c.cmd), logo: Txt(c.logo), sid: Txt(c.id) })
     end for
     groups = []
     for each gid in order
@@ -264,4 +276,188 @@ sub stalkerLink(src as object, cmd as string, out as object)
         end if
     end for
     out.error = "El portal no dio el enlace del canal."
+end sub
+
+' ---------- Guía: lo que pasa ahora y lo que sigue (pedido al servidor, canal por canal) ----------
+
+sub epg(src as object, ch as object, out as object)
+    list = []
+    if src.type = "xtream" and Txt(ch.id) <> "" then
+        r = HttpGet(XtreamApi(src, "get_short_epg") + "&stream_id=" + Esc(Txt(ch.id)) + "&limit=6", {}, 15000)
+        j = ParseJson(r.body)
+        if j <> invalid and type(j.epg_listings) = "roArray" then
+            for each p in j.epg_listings
+                list.push({ t: B64(Txt(p.title)), d: B64(Txt(p.description)), s: IntOf(p.start_timestamp), e: IntOf(p.stop_timestamp) })
+            end for
+        end if
+    else if src.type = "stalker" and Txt(ch.sid) <> "" then
+        token = stalkerToken(src, false)
+        if token <> "" then
+            r = HttpGet(StalkerApi(src.server) + "?type=itv&action=get_short_epg&ch_id=" + Esc(Txt(ch.sid)) + "&size=6&JsHttpRequest=1-xml", StalkerHeaders(src, token), 15000)
+            j = ParseJson(r.body)
+            if j <> invalid and type(j.js) = "roArray" then
+                for each p in j.js
+                    list.push({ t: Txt(p.name), d: Txt(p.descr), s: IntOf(p.start_timestamp), e: IntOf(p.stop_timestamp) })
+                end for
+            end if
+        end if
+    end if
+    now = NowSecs()
+    keep = []
+    for each p in list
+        if p.e > now and p.t <> "" then keep.push(p)
+    end for
+    out.list = keep
+    out.ok = true
+end sub
+
+' ---------- Películas y series (Xtream) ----------
+
+function vodAction(vod as string, what as string) as string
+    if vod = "series" then
+        if what = "cats" then return "get_series_categories"
+        return "get_series"
+    end if
+    if what = "cats" then return "get_vod_categories"
+    return "get_vod_streams"
+end function
+
+sub vodCats(src as object, vod as string, out as object)
+    r = HttpGet(XtreamApi(src, vodAction(vod, "cats")), {}, 30000)
+    if r.code <> 200 then
+        fail(out, r, "Categorías")
+        return
+    end if
+    list = ParseJson(r.body)
+    cats = []
+    if type(list) = "roArray" then
+        for each c in list
+            cats.push({ id: Txt(c.category_id), name: Txt(c.category_name) })
+        end for
+    end if
+    out.cats = cats
+    out.ok = true
+end sub
+
+function vodItem(vod as string, c as object) as object
+    if vod = "series" then return { id: Txt(c.series_id), n: Txt(c.name), i: Txt(c.cover) }
+    return { id: Txt(c.stream_id), n: Txt(c.name), i: Txt(c.stream_icon), x: Txt(c.container_extension) }
+end function
+
+sub vodList(src as object, vod as string, cat as string, out as object)
+    r = HttpGet(XtreamApi(src, vodAction(vod, "list")) + "&category_id=" + Esc(cat), {}, 60000)
+    if r.code <> 200 then
+        fail(out, r, "Catálogo")
+        return
+    end if
+    list = ParseJson(r.body)
+    r.body = ""
+    items = []
+    if type(list) = "roArray" then
+        for each c in list
+            items.push(vodItem(vod, c))
+            if items.Count() >= 3000 then exit for
+        end for
+    end if
+    out.items = items
+    out.ok = true
+end sub
+
+' Búsqueda: baja el catálogo completo una vez, lo guarda compacto en cachefs y filtra ahí.
+sub vodSearch(src as object, vod as string, q as string, out as object)
+    f = "cachefs:/s_" + src.id + "_" + vod + ".json"
+    all = ParseJson(ReadAsciiFile(f))
+    if type(all) <> "roArray" then
+        r = HttpGet(XtreamApi(src, vodAction(vod, "list")), {}, 120000)
+        if r.code <> 200 then
+            fail(out, r, "Búsqueda")
+            return
+        end if
+        list = ParseJson(r.body)
+        r.body = ""
+        all = []
+        if type(list) = "roArray" then
+            for each c in list
+                all.push(vodItem(vod, c))
+            end for
+        end if
+        list = invalid
+        WriteAsciiFile(f, FormatJson(all))
+    end if
+    needle = LCase(q.Trim())
+    items = []
+    for each it in all
+        if Instr(1, LCase(it.n), needle) > 0 then
+            items.push(it)
+            if items.Count() >= 200 then exit for
+        end if
+    end for
+    out.items = items
+    out.ok = true
+end sub
+
+sub movieInfo(src as object, id as string, out as object)
+    r = HttpGet(XtreamApi(src, "get_vod_info") + "&vod_id=" + Esc(id), {}, 30000)
+    j = ParseJson(r.body)
+    if r.code <> 200 or j = invalid then
+        fail(out, r, "Ficha")
+        return
+    end if
+    info = j.info
+    if type(info) <> "roAssociativeArray" then info = {}
+    md = j.movie_data
+    if type(md) <> "roAssociativeArray" then md = {}
+    year = Left(Txt(info.releasedate), 4)
+    if year = "" then year = Txt(info.year)
+    cover = Txt(info.cover_big)
+    if cover = "" then cover = Txt(info.movie_image)
+    out.info = { id: id, n: Txt(md.name), plot: Txt(info.plot), year: year, dur: IntOf(info.duration_secs), genre: Txt(info.genre), cast: Txt(info.cast), director: Txt(info.director), rating: Txt(info.rating), cover: cover, x: Txt(md.container_extension) }
+    if out.info.n = "" then out.info.n = Txt(info.name)
+    out.ok = true
+end sub
+
+sub seriesInfo(src as object, id as string, out as object)
+    r = HttpGet(XtreamApi(src, "get_series_info") + "&series_id=" + Esc(id), {}, 60000)
+    j = ParseJson(r.body)
+    r.body = ""
+    if r.code <> 200 or j = invalid then
+        fail(out, r, "Ficha")
+        return
+    end if
+    info = j.info
+    if type(info) <> "roAssociativeArray" then info = {}
+    year = Left(Txt(info.releaseDate), 4)
+    out.info = { id: id, n: Txt(info.name), plot: Txt(info.plot), year: year, genre: Txt(info.genre), cast: Txt(info.cast), rating: Txt(info.rating), cover: Txt(info.cover) }
+    ' Temporadas → episodios. Algunos paneles mandan un objeto por temporada y otros una lista.
+    bySeason = {}
+    eps = j.episodes
+    groups = []
+    if type(eps) = "roAssociativeArray" then
+        for each k in eps
+            groups.push(eps[k])
+        end for
+    else if type(eps) = "roArray" then
+        groups = eps
+    end if
+    for each g in groups
+        if type(g) = "roArray" then
+            for each e in g
+                se = IntOf(e.season)
+                key = se.ToStr()
+                if not bySeason.DoesExist(key) then bySeason[key] = { n: se, eps: [] }
+                ei = e.info
+                if type(ei) <> "roAssociativeArray" then ei = {}
+                bySeason[key].eps.push({ id: Txt(e.id), n: IntOf(e.episode_num), t: Txt(e.title), x: Txt(e.container_extension), d: IntOf(ei.duration_secs) })
+            end for
+        end if
+    end for
+    seasons = []
+    for each k in bySeason
+        s = bySeason[k]
+        s.eps.SortBy("n")
+        seasons.push(s)
+    end for
+    seasons.SortBy("n")
+    out.seasons = seasons
+    out.ok = true
 end sub
