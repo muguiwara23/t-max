@@ -3,7 +3,7 @@ import { ExpoMpvView, type ExpoMpvViewRef, type PlaybackState, type TrackInfo } 
 import { useKeepAwake } from 'expo-keep-awake';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { PanResponder, Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { PanResponder, Platform, ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 
 import Pressable from '../ui/Press';
 import { redact } from '@tmax/core';
@@ -143,6 +143,12 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
     onClose();
   };
 
+  useEffect(() => {
+    if (panel !== 'none') {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    } else if (overlay) poke();
+  }, [panel]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useBack(true, () => {
     if (panel !== 'none') setPanel('none');
     else void close();
@@ -278,7 +284,11 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
 
           {(panel === 'audio' || panel === 'subs') && (
             <View style={[styles.tracks, compact && styles.tracksCompact]}>
-              <T kind="label" weight="bold" color={colors.textSecondary} style={{ marginBottom: 6 }}>{panel === 'audio' ? 'AUDIO' : 'SUBTÍTULOS'}</T>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                <T kind="label" weight="bold" color={colors.textSecondary} style={{ flex: 1 }}>{panel === 'audio' ? 'AUDIO' : 'SUBTÍTULOS'}</T>
+                <Pressable accessibilityLabel="Cerrar" onPress={() => setPanel('none')} hitSlop={10}><Icon name="close" size={18} /></Pressable>
+              </View>
+              <ScrollView style={{ flexGrow: 0, flexShrink: 1 }} showsVerticalScrollIndicator>
               {panel === 'subs' && (
                 <Pressable style={styles.trackRow} onPress={() => { mpv.current?.setPropertyString('sid', 'no'); setPanel('none'); }}>
                   <T weight={subs.some((s) => s.selected) ? 'medium' : 'bold'}>Ninguno</T>
@@ -290,6 +300,7 @@ export default function VodPlayerScreen({ request, onClose }: Props) {
                 </Pressable>
               ))}
               {(panel === 'audio' ? audio : subs).length === 0 && <T color={colors.textSecondary}>Este video no tiene {panel === 'audio' ? 'otras pistas de audio' : 'subtítulos'}.</T>}
+              </ScrollView>
             </View>
           )}
 
@@ -357,7 +368,7 @@ const styles = StyleSheet.create({
   bottomScrim: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 220, backgroundColor: '#00000066' },
   top: { position: 'absolute', left: 12, right: 12, top: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   round: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.overlayPanel, alignItems: 'center', justifyContent: 'center' },
-  tracks: { position: 'absolute', right: 24, bottom: 200, width: 360, maxWidth: '85%', borderRadius: radius.xl, backgroundColor: colors.overlayPanel, padding: 16, gap: 4 },
+  tracks: { position: 'absolute', zIndex: 20, elevation: 20, maxHeight: '60%', right: 24, bottom: 200, width: 360, maxWidth: '85%', borderRadius: radius.xl, backgroundColor: colors.overlayPanel, padding: 16, gap: 4 },
   trackRow: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 6, borderRadius: radius.sm },
   bottom: { position: 'absolute', left: 12, right: 12, bottom: 12, borderRadius: radius.xl, backgroundColor: colors.overlayPanel, paddingHorizontal: 24, paddingVertical: 18, gap: 14 },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
@@ -371,7 +382,7 @@ const styles = StyleSheet.create({
   ctl: { backgroundColor: '#FFFFFF14', alignItems: 'center', justifyContent: 'center' },
   ctlCaption: { position: 'absolute', bottom: 6, fontSize: 9, lineHeight: 10 },
   sideCompact: { top: 8, bottom: 8, left: 8 },
-  tracksCompact: { top: 8, bottom: undefined, right: 8, maxHeight: '90%' },
+  tracksCompact: { top: 8, bottom: undefined, right: 8, maxHeight: '94%', padding: 12 },
   playBtnCompact: { width: 56, height: 56, borderRadius: 28 },
   bottomCompact: { paddingVertical: 10, paddingHorizontal: 16, gap: 8, left: 8, right: 8, bottom: 8 },
   playBtn: { width: 76, height: 76, borderRadius: 38, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },

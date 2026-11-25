@@ -8,6 +8,7 @@ import { saveSourceSettings, sourceSettings, type Source } from '../data/sources
 import { DEFAULT_SUB_STYLE, type SourceSettings, type SubStyle } from '../data/settings-model';
 import { colors, font, radius } from '../theme';
 import { Button, Chip, Switch, T } from '../ui/kit';
+import { useIsCompact, useIsPhone } from '../ui/layout';
 
 export function SubStyleEditor({ value, onChange }: { value: SubStyle; onChange: (s: SubStyle) => void }) {
   const set = (p: Partial<SubStyle>) => onChange({ ...value, ...p });
@@ -61,6 +62,7 @@ export function SourceSettingsModal({ source, onClose, onSaved }: { source: Sour
   const [st, setSt] = useState<SourceSettings>({});
   const [ownSubs, setOwnSubs] = useState(false);
   const [subs, setSubs] = useState<SubStyle>(DEFAULT_SUB_STYLE);
+  const compact = useIsCompact() || useIsPhone();
 
   useEffect(() => {
     if (!source) return;
@@ -82,8 +84,8 @@ export function SourceSettingsModal({ source, onClose, onSaved }: { source: Sour
 
   return (
     <Modal visible transparent animationType="fade" supportedOrientations={['landscape', 'portrait']} onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.back}>
-        <View style={styles.modal}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.back, compact && { padding: 8 }]}>
+        <View style={[styles.modal, compact && { padding: 14, gap: 10, maxHeight: '100%' }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View style={{ flex: 1 }}>
               <T kind="title" weight="bold">Ajustes de "{source.name}"</T>

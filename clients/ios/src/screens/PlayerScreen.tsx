@@ -4,7 +4,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { StatusBar } from 'expo-status-bar';
 import type { File } from 'expo-file-system';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, AppState, FlatList, Platform, StyleSheet, View } from 'react-native';
+import { Alert, AppState, FlatList, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 import Pressable from '../ui/Press';
 
@@ -189,6 +189,12 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
     };
   }, []);
 
+  useEffect(() => {
+    if (panel !== 'none') {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    } else if (overlay) poke();
+  }, [panel]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useBack(true, () => {
     if (panel !== 'none') setPanel('none');
     else {
@@ -318,7 +324,11 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
 
           {(panel === 'audio' || panel === 'subs') && (
             <View style={[styles.tracks, compact && styles.tracksCompact]}>
-              <T kind="label" weight="bold" color={colors.textSecondary} style={{ marginBottom: 6 }}>{panel === 'audio' ? 'AUDIO' : 'SUBTÍTULOS'}</T>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                <T kind="label" weight="bold" color={colors.textSecondary} style={{ flex: 1 }}>{panel === 'audio' ? 'AUDIO' : 'SUBTÍTULOS'}</T>
+                <Pressable accessibilityLabel="Cerrar" onPress={() => setPanel('none')} hitSlop={10}><Icon name="close" size={18} /></Pressable>
+              </View>
+              <ScrollView style={{ flexGrow: 0, flexShrink: 1 }} showsVerticalScrollIndicator>
               {panel === 'subs' && (
                 <Pressable style={styles.trackRow} onPress={() => { video.current?.setSubtitle(null); setPanel('none'); }}>
                   <T weight={subs.some((s) => s.selected) ? 'medium' : 'bold'}>Ninguno</T>
@@ -330,6 +340,7 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
                 </Pressable>
               ))}
               {(panel === 'audio' ? audio : subs).length === 0 && <T color={colors.textSecondary}>Este canal no tiene {panel === 'audio' ? 'otras pistas de audio' : 'subtítulos'}.</T>}
+              </ScrollView>
             </View>
           )}
 
@@ -386,9 +397,9 @@ const styles = StyleSheet.create({
   round: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.overlayPanel, alignItems: 'center', justifyContent: 'center' },
   pill: { height: 34, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.overlayPanel, flexDirection: 'row', alignItems: 'center', gap: 8 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.live },
-  side: { position: 'absolute', left: 24, top: 96, bottom: 270, width: 340, maxWidth: '80%', borderRadius: radius.xl, backgroundColor: colors.overlayPanel, paddingVertical: 10, paddingHorizontal: 8 },
+  side: { position: 'absolute', zIndex: 20, elevation: 20, left: 24, top: 96, bottom: 270, width: 340, maxWidth: '80%', borderRadius: radius.xl, backgroundColor: colors.overlayPanel, paddingVertical: 10, paddingHorizontal: 8 },
   sideRow: { height: 56, marginBottom: 2, borderRadius: radius.md, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 10 },
-  tracks: { position: 'absolute', right: 24, bottom: 270, width: 360, maxWidth: '85%', borderRadius: radius.xl, backgroundColor: colors.overlayPanel, padding: 16, gap: 4 },
+  tracks: { position: 'absolute', zIndex: 20, elevation: 20, maxHeight: '60%', right: 24, bottom: 270, width: 360, maxWidth: '85%', borderRadius: radius.xl, backgroundColor: colors.overlayPanel, padding: 16, gap: 4 },
   trackRow: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 6, borderRadius: radius.sm },
   bottom: { position: 'absolute', left: 12, right: 12, bottom: 12, borderRadius: radius.xl, backgroundColor: colors.overlayPanel, paddingHorizontal: 24, paddingVertical: 20, gap: 14 },
   bar: { height: 6, borderRadius: 3, backgroundColor: '#34394380', overflow: 'hidden' },
@@ -396,7 +407,7 @@ const styles = StyleSheet.create({
   controls: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 12 },
   ctl: { backgroundColor: '#FFFFFF14', alignItems: 'center', justifyContent: 'center' },
   sideCompact: { top: 8, bottom: 8, left: 8 },
-  tracksCompact: { top: 8, bottom: undefined, right: 8, maxHeight: '90%' },
+  tracksCompact: { top: 8, bottom: undefined, right: 8, maxHeight: '94%', padding: 12 },
   playBtnCompact: { width: 56, height: 56, borderRadius: 28 },
   bottomCompact: { paddingVertical: 10, paddingHorizontal: 16, gap: 8, left: 8, right: 8, bottom: 8 },
   playBtn: { width: 76, height: 76, borderRadius: 38, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },

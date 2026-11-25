@@ -309,7 +309,8 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
             )}
           </View>
 
-          <View style={compact ? { display: 'none' } : phone ? { gap: 8, display: selected ? 'flex' : 'none' } : { flex: 1, gap: 12 }}>
+          <ScrollView style={compact ? { display: 'none' } : phone ? { flexGrow: 0, display: selected ? 'flex' : 'none' } : { flex: 1 }}
+            contentContainerStyle={{ gap: phone ? 8 : 12 }} scrollEnabled={!phone} showsVerticalScrollIndicator={false}>
             <View>
               <Video channel={previewEnabled ? selected : null} style={[styles.preview, phone && { borderRadius: radius.md }]} />
               {selected && (
@@ -368,7 +369,7 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
                 </View>
               </View>
             )}
-          </View>
+          </ScrollView>
         </View>
       )}
     </View>
