@@ -91,7 +91,8 @@ export function SourceSettingsModal({ source, onClose, onSaved }: { source: Sour
             </View>
             <Button compact icon="close" onPress={onClose} />
           </View>
-          <ScrollView style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 16, paddingVertical: 4 }}>
+          <ScrollView style={{ flexGrow: 0, flexShrink: 1 }} contentContainerStyle={{ gap: 16, paddingVertical: 4 }}
+            keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
             {source.type === 'xtream' && (
               <Section title="Formato de canales en vivo">
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -104,7 +105,7 @@ export function SourceSettingsModal({ source, onClose, onSaved }: { source: Sour
             {source.type !== 'stalker' && (
               <Section title="User-Agent" hint="Algunos proveedores solo aceptan ciertos reproductores. Vacío = el de siempre.">
                 <TextInput value={st.userAgent ?? ''} onChangeText={(v) => set({ userAgent: v })} placeholder="Vacío = predeterminado" placeholderTextColor={colors.textTertiary}
-                  autoCapitalize="none" autoCorrect={false} style={styles.input} />
+                  autoCapitalize="none" autoCorrect={false} returnKeyType="done" submitBehavior="blurAndSubmit" style={styles.input} />
               </Section>
             )}
             {source.type !== 'stalker' && (

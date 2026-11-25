@@ -1,6 +1,6 @@
 // Ajustes: Fuentes (cada una con sus propios ajustes), Reproductor y subtítulos, Respaldo y Acerca de.
 import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
 
 import Pressable from '../ui/Press';
 
@@ -28,7 +28,7 @@ import { Button, Chip, Switch, T } from '../ui/kit';
 import { SourceSettingsModal, SubStyleEditor } from './SourceSettings';
 import { useIsCompact, useIsPhone } from '../ui/layout';
 
-export const APP_VERSION = '0.6.0';
+export const APP_VERSION = '0.6.1';
 
 type Cat = 'sources' | 'player' | 'backup' | 'diag' | 'about';
 const CATS: { id: Cat | 'soon'; name: string }[] = [
@@ -330,7 +330,8 @@ function Field({ label, value, onChange, placeholder, secure, keyboard }: {
     <View style={{ gap: 6 }}>
       <T kind="label" color={colors.textSecondary}>{label}</T>
       <TextInput value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={colors.textTertiary}
-        secureTextEntry={secure} autoCapitalize="none" autoCorrect={false} keyboardType={keyboard === 'url' ? 'url' : 'default'} style={styles.input} />
+        secureTextEntry={secure} autoCapitalize="none" autoCorrect={false} keyboardType={keyboard === 'url' ? 'url' : 'default'}
+        returnKeyType="done" submitBehavior="blurAndSubmit" onSubmitEditing={() => Keyboard.dismiss()} style={styles.input} />
     </View>
   );
 }
@@ -353,6 +354,7 @@ function SourceForm({ visible, source, onClose, onSaved }: { visible: boolean; s
   const [pLogin, setPLogin] = useState('');
   const [pPass, setPPass] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const compact = useIsCompact() || useIsPhone();
 
   useEffect(() => {
     if (!visible) return;
@@ -391,6 +393,7 @@ function SourceForm({ visible, source, onClose, onSaved }: { visible: boolean; s
   }, [visible, source]);
 
   const save = async () => {
+    Keyboard.dismiss();
     const macOk = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/.test(mac.trim());
     if (type === 'xtream' && (!server.trim() || !username.trim() || !password)) return setError('Llena servidor, usuario y contraseña.');
     if (type === 'm3u' && !/^https?:\/\//i.test(m3uUrl.trim())) return setError('La URL de la lista debe empezar con http:// o https://');
@@ -423,12 +426,17 @@ function SourceForm({ visible, source, onClose, onSaved }: { visible: boolean; s
 
   return (
     <Modal visible={visible} transparent animationType="fade" supportedOrientations={['landscape', 'portrait']} onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalBack}>
-        <View style={styles.modal}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <T kind="title" weight="bold" style={{ flex: 1 }}>{source ? 'Editar fuente' : 'Agregar fuente'}</T>
-            <Button compact icon="close" onPress={onClose} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.modalBack, compact && { padding: 8 }]}>
+        <Pressable focusable={false} style={StyleSheet.absoluteFill} onPress={() => Keyboard.dismiss()} />
+        <View style={[styles.modal, compact && { padding: 14, gap: 10 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <T kind="title" weight="bold" style={{ flex: 1 }} lines={1}>{source ? 'Editar fuente' : 'Agregar fuente'}</T>
+            {compact && <Button compact variant="primary" icon="check" label="Guardar" onPress={save} />}
+            <Button compact icon="close" onPress={() => { Keyboard.dismiss(); onClose(); }} />
           </View>
+          {compact && error && <T kind="label" color={colors.danger}>{error}</T>}
+          <ScrollView style={{ flexGrow: 0, flexShrink: 1 }} contentContainerStyle={{ gap: compact ? 10 : 14, paddingBottom: 4 }}
+            keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
           {!source && (
             <View style={{ flexDirection: 'row' }}>
               <Chip label="Xtream" active={type === 'xtream'} onPress={() => setType('xtream')} />
@@ -455,7 +463,7 @@ function SourceForm({ visible, source, onClose, onSaved }: { visible: boolean; s
                 <T kind="label" weight="bold" color={colors.accent}>{adv ? '▾' : '▸'} Avanzado (solo si tu portal lo pide)</T>
               </Pressable>
               {adv && (
-                <ScrollView style={{ maxHeight: 300 }} contentContainerStyle={{ gap: 10 }}>
+                <View style={{ gap: 10 }}>
                   <T kind="caption" color={colors.textSecondary}>
                     Algunos portales atan la MAC a un aparato. Copia estos datos de tu decodificador MAG original (o de la app que ya usabas). Una vez que el portal los acepta, no los cambies.
                   </T>
@@ -481,7 +489,7 @@ function SourceForm({ visible, source, onClose, onSaved }: { visible: boolean; s
                     <View style={{ flex: 1 }}><Field label="Usuario del portal" value={pLogin} onChange={setPLogin} /></View>
                     <View style={{ flex: 1 }}><Field label="Contraseña del portal" value={pPass} onChange={setPPass} secure /></View>
                   </View>
-                </ScrollView>
+                </View>
               )}
             </>
           )}
@@ -490,9 +498,10 @@ function SourceForm({ visible, source, onClose, onSaved }: { visible: boolean; s
           )}
           {error && <T kind="label" color={colors.danger}>{error}</T>}
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
-            <Button label="Cancelar" onPress={onClose} />
+            <Button label="Cancelar" onPress={() => { Keyboard.dismiss(); onClose(); }} />
             <Button variant="primary" label="Guardar y actualizar" onPress={save} />
           </View>
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -508,5 +517,5 @@ const styles = StyleSheet.create({
   type: { minWidth: 84, height: 28, borderRadius: 8, backgroundColor: colors.hover, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
   input: { height: 46, borderRadius: 12, backgroundColor: colors.hover, color: colors.text, paddingHorizontal: 14, fontFamily: font.medium, fontSize: 16 },
   modalBack: { flex: 1, backgroundColor: '#000000B3', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  modal: { width: 620, maxWidth: '100%', backgroundColor: colors.panel, borderRadius: radius.xl, padding: 24, gap: 14 },
+  modal: { width: 620, maxWidth: '100%', maxHeight: '100%', backgroundColor: colors.panel, borderRadius: radius.xl, padding: 24, gap: 14 },
 });
