@@ -61,12 +61,12 @@ export function useStreamFacts(opts: {
   return { facts, onProgress };
 }
 
-export default function StreamInfo({ facts, extra }: { facts: StreamFacts; extra?: string | null }) {
+export default function StreamInfo({ facts, extra, center }: { facts: StreamFacts; extra?: string | null; center?: boolean }) {
   const chips = factChips(facts);
   if (extra) chips.unshift({ text: extra });
   if (chips.length === 0) return null;
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: center ? 0 : 6, justifyContent: center ? 'center' : 'flex-start' }}>
       {chips.map((c, i) => (
         <View key={i} style={{ height: 24, paddingHorizontal: 9, borderRadius: radius.pill, justifyContent: 'center', backgroundColor: c.strong ? colors.accentSoft : '#FFFFFF14' }}>
           <T kind="caption" weight="bold" color={c.strong ? colors.accent : colors.textSecondary} style={{ fontVariant: ['tabular-nums'] }}>{c.text}</T>

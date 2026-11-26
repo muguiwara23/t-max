@@ -2,7 +2,7 @@
   "expo": {
     "name": "T-Max",
     "slug": "t-max",
-    "version": "0.6.2",
+    "version": "0.6.3",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -11,7 +11,7 @@
       "supportsTablet": true,
       "requireFullScreen": true,
       "bundleIdentifier": "com.muguiwara23.tmax",
-      "buildNumber": "18",
+      "buildNumber": "19",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
@@ -60,7 +60,7 @@
     ],
     "android": {
       "package": "com.muguiwara23.tmax",
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0A0B0D"

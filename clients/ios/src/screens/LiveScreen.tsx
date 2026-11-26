@@ -64,6 +64,8 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ChannelItem[] | null>(null);
   const [selected, setSelected] = useState<ChannelItem | null>(null);
+  // iPad/tablet: ocultar la lista de canales para ver la vista previa más grande.
+  const [listHidden, setListHidden] = useState(false);
   const [programmes, setProgrammes] = useState<Map<string, ProgrammeRow[]>>(new Map());
   const [guideStart, setGuideStart] = useState(() => Math.floor(Date.now() / HALF_HOUR) * HALF_HOUR - HALF_HOUR);
   const [guideSel, setGuideSel] = useState<{ key: string; start: number } | null>(null);
@@ -166,8 +168,9 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
   const sel = selected ? nowNext(selected.key) : { current: undefined, next: [] as ProgrammeRow[] };
   const empty = sources.length === 0 || (filter === null && allGroup !== null && allGroup.count === 0);
 
-  useBack(previewEnabled && (!!group || !!query || mode === 'guide'), () => {
-    if (query) setQuery('');
+  useBack(previewEnabled && (listHidden || !!group || !!query || mode === 'guide'), () => {
+    if (listHidden) setListHidden(false);
+    else if (query) setQuery('');
     else if (mode === 'guide') setMode('list');
     else setGroup(null);
   });
@@ -226,7 +229,7 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 4 }}>
           <SourceTab label="Todas" active={filter === null} onPress={() => setFilter(null)} />
           {sources.map((src) => (
-            <SourceTab key={src.id} label={src.name} kind={src.type} active={filter === src.id} onPress={() => setFilter(src.id)} />
+            <SourceTab key={src.id} label={src.name} active={filter === src.id} onPress={() => setFilter(src.id)} />
           ))}
         </ScrollView>
       )}
@@ -289,7 +292,7 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
         </View>
       ) : (
         <View style={{ flex: 1, flexDirection: phone ? 'column-reverse' : 'row', gap: phone || compact ? 8 : 12 }}>
-          <View style={[styles.panel, styles.listCol, (phone || compact) && { width: undefined, flex: 1 }]}>
+          <View style={[styles.panel, styles.listCol, (phone || compact) && { width: undefined, flex: 1 }, listHidden && !phone && !compact && { display: 'none' }]}>
             {results ? (
               <>
                 <View style={styles.listHead}><T kind="title" weight="bold">Resultados</T><T kind="label" color={colors.textSecondary}>{results.length}</T></View>
@@ -345,6 +348,7 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
                   <Button variant="primary" icon="play" label="Ver en pantalla completa" onPress={() => openFull(selected)} />
                   <Button icon="dvr" label="Grabar" onPress={() => recordNow(selected, sel.current)} />
                   <Button icon={selected.favorite ? 'starFilled' : 'star'} label={selected.favorite ? 'En favoritos' : 'Favorito'} onPress={fav} />
+                  <Button icon="list" label={listHidden ? 'Mostrar canales' : 'Ocultar canales'} onPress={() => setListHidden((v) => !v)} />
                 </View>
               </View>
             ) : (

@@ -28,7 +28,7 @@ import { Button, Chip, Switch, T } from '../ui/kit';
 import { SourceSettingsModal, SubStyleEditor } from './SourceSettings';
 import { useIsCompact, useIsPhone } from '../ui/layout';
 
-export const APP_VERSION = '0.6.2';
+export const APP_VERSION = '0.6.3';
 
 type Cat = 'sources' | 'player' | 'backup' | 'diag' | 'about';
 const CATS: { id: Cat | 'soon'; name: string }[] = [

@@ -51,6 +51,7 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
   const [state, setState] = useState<PlaybackState>('idle');
   const [tracks, setTracks] = useState<TrackInfo[]>([]);
   const [progs, setProgs] = useState<ProgrammeRow[]>([]);
+  const [sideProgs, setSideProgs] = useState<Map<string, ProgrammeRow[]>>(new Map());
   const [startMs, setStartMs] = useState<{ ms: number; format: string } | null>(null);
   const [now, setNow] = useState(Date.now());
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -195,6 +196,15 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
     } else if (overlay) poke();
   }, [panel]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Lo que pasa ahora en cada canal de la lista lateral (se pide al abrirla).
+  useEffect(() => {
+    if (panel !== 'channels') return;
+    const t = Date.now();
+    programmesFor(list.slice(0, 1500), t - 4 * 3600000, t + 3600000).then(setSideProgs).catch(() => {});
+  }, [panel, list]);
+
+  const nowOn = (key: string): ProgrammeRow | undefined => (sideProgs.get(key) ?? []).find((p) => p.start <= now && p.end > now);
+
   useBack(true, () => {
     if (panel !== 'none') setPanel('none');
     else {
@@ -291,8 +301,6 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
             <Pressable accessibilityLabel="Volver" onPress={() => { void stopRec(); onClose(channel); }} style={styles.round}><Icon name="back" size={20} /></Pressable>
             <View style={{ flex: 1, marginLeft: 12 }}>
               <T kind="title" weight="bold" lines={1}>{channel.number ?? ''} · {channel.name}</T>
-              {state === 'buffering' || !startMs ? <T kind="label" color={colors.textSecondary}>{state === 'buffering' ? 'Cargando…' : ' '}</T> : null}
-              <StreamInfo facts={{ ...facts, format: startMs?.format }} extra={startMs ? `arranque ${startMs.ms} ms` : null} />
             </View>
             {rec ? (
               <Pressable accessibilityLabel="Detener grabación" onPress={() => void stopRec()} style={[styles.pill, { backgroundColor: '#FF5A4E33' }]}>
@@ -311,13 +319,20 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
                 data={list}
                 keyExtractor={(c) => c.key}
                 initialScrollIndex={Math.max(0, index - 3)}
-                getItemLayout={(_d, i) => ({ length: 58, offset: 58 * i, index: i })}
-                renderItem={({ item, index: i }) => (
-                  <Pressable onPress={() => { if (recRef.current && i !== index) void stopRec(); setIndex(i); poke(); }} style={[styles.sideRow, i === index && { backgroundColor: '#FFFFFF1F' }]}>
-                    <T kind="label" color={colors.textSecondary} style={{ width: 34, textAlign: 'right' }}>{item.number ?? ''}</T>
-                    <T weight={i === index ? 'bold' : 'medium'} lines={1} style={{ flex: 1 }}>{item.name}</T>
-                  </Pressable>
-                )}
+                getItemLayout={(_d, i) => ({ length: 68, offset: 68 * i, index: i })}
+                extraData={sideProgs}
+                renderItem={({ item, index: i }) => {
+                  const p = nowOn(item.key);
+                  return (
+                    <Pressable onPress={() => { if (recRef.current && i !== index) void stopRec(); setIndex(i); poke(); }} style={[styles.sideRow, i === index && { backgroundColor: '#FFFFFF1F' }]}>
+                      <T kind="label" color={colors.textSecondary} style={{ width: 34, textAlign: 'right' }}>{item.number ?? ''}</T>
+                      <View style={{ flex: 1 }}>
+                        <T weight={i === index ? 'bold' : 'medium'} lines={1} color={i === index ? colors.accent : colors.text}>{item.name}</T>
+                        <T kind="caption" lines={1} color={colors.textSecondary}>{p ? `${hhmm(p.start)} · ${p.title}` : 'Sin guía'}</T>
+                      </View>
+                    </Pressable>
+                  );
+                }}
               />
             </View>
           )}
@@ -358,6 +373,11 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
               )}
             </View>
             {cur && <View style={styles.bar}><View style={[styles.barFill, { width: `${pct}%` }]} /></View>}
+            {state === 'buffering' || !startMs ? (
+              <T kind="caption" color={colors.textSecondary} style={{ textAlign: 'center' }}>{state === 'buffering' ? 'Cargando…' : ' '}</T>
+            ) : (
+              <StreamInfo center facts={{ ...facts, format: startMs.format }} extra={`arranque ${startMs.ms} ms`} />
+            )}
             <View style={styles.controls}>
               <Ctl compact={compact} icon="subtitles" label="Subtítulos" onPress={() => openTracks('subs')} />
               <Ctl compact={compact} icon="audio" label="Audio" onPress={() => openTracks('audio')} />
@@ -391,15 +411,15 @@ function Ctl({ compact, icon, label, onPress, big, active }: { compact?: boolean
 
 const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFill, backgroundColor: '#000' },
-  topScrim: { position: 'absolute', left: 0, right: 0, top: 0, height: 170, backgroundColor: '#00000080' },
-  bottomScrim: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 280, backgroundColor: '#00000066' },
+  topScrim: { position: 'absolute', left: 0, right: 0, top: 0, height: 120, backgroundColor: '#00000080' },
+  bottomScrim: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 310, backgroundColor: '#00000066' },
   top: { position: 'absolute', left: 12, right: 12, top: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   round: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.overlayPanel, alignItems: 'center', justifyContent: 'center' },
   pill: { height: 34, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.overlayPanel, flexDirection: 'row', alignItems: 'center', gap: 8 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.live },
-  side: { position: 'absolute', zIndex: 20, elevation: 20, left: 24, top: 96, bottom: 270, width: 340, maxWidth: '80%', borderRadius: radius.xl, backgroundColor: colors.overlayPanel, paddingVertical: 10, paddingHorizontal: 8 },
-  sideRow: { height: 56, marginBottom: 2, borderRadius: radius.md, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 10 },
-  tracks: { position: 'absolute', zIndex: 20, elevation: 20, maxHeight: '60%', right: 24, bottom: 270, width: 360, maxWidth: '85%', borderRadius: radius.xl, backgroundColor: colors.overlayPanel, padding: 16, gap: 4 },
+  side: { position: 'absolute', zIndex: 20, elevation: 20, left: 24, top: 96, bottom: 300, width: 360, maxWidth: '80%', borderRadius: radius.xl, backgroundColor: colors.overlayPanel, paddingVertical: 10, paddingHorizontal: 8 },
+  sideRow: { height: 66, marginBottom: 2, borderRadius: radius.md, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 10 },
+  tracks: { position: 'absolute', zIndex: 20, elevation: 20, maxHeight: '60%', right: 24, bottom: 300, width: 360, maxWidth: '85%', borderRadius: radius.xl, backgroundColor: colors.overlayPanel, padding: 16, gap: 4 },
   trackRow: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 6, borderRadius: radius.sm },
   bottom: { position: 'absolute', left: 12, right: 12, bottom: 12, borderRadius: radius.xl, backgroundColor: colors.overlayPanel, paddingHorizontal: 24, paddingVertical: 20, gap: 14 },
   bar: { height: 6, borderRadius: 3, backgroundColor: '#34394380', overflow: 'hidden' },
