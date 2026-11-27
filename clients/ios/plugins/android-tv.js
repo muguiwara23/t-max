@@ -2,7 +2,7 @@
 // La misma app sirve para teléfonos, tablets y TV.
 const fs = require('fs');
 const path = require('path');
-const { withAndroidManifest, withDangerousMod } = require('expo/config-plugins');
+const { withAndroidManifest, withDangerousMod } = require(require.resolve('expo/config-plugins', { paths: [process.cwd(), __dirname] }));
 
 function withBanner(config) {
   return withDangerousMod(config, [

@@ -2,7 +2,7 @@
 // (variables TMAX_KEYSTORE…, desde los secretos del repositorio), se firma con ella: así
 // las actualizaciones se instalan encima y nadie más puede hacer una "actualización" válida.
 // Sin esas variables se sigue usando la llave de depuración de React Native (como hasta 0.6).
-const { withAppBuildGradle } = require('expo/config-plugins');
+const { withAppBuildGradle } = require(require.resolve('expo/config-plugins', { paths: [process.cwd(), __dirname] }));
 
 const RELEASE_SIGNING = `
         release {
