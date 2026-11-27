@@ -12,5 +12,6 @@
 | [0008](0008-secciones-navegacion-mis-programas-dvr.md) | Secciones, navegación de una lista, Mis programas y DVR en el dispositivo | Aceptado |
 | [0009](0009-metadatos-peliculas-series.md) | Datos de Películas y Series: proveedor primero, TMDB opcional | Aceptado |
 | [0010](0010-cliente-roku.md) | Cliente Roku: nodo Video, TS con `streamFormat: "ts"`, configuración desde el celular | Propuesto (POC) |
+| [0011](0011-cliente-tv.md) | T-Max TV: app aparte para TV con React Native TV, comparte datos con la del celular | Aceptado (paso 1) |
 
 Formato: Contexto → Decisión → Opciones → Consecuencias → Acciones. Las decisiones no se borran: se marcan como "Reemplazada por ADR-XXXX".

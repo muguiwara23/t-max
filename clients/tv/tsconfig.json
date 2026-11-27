@@ -1,0 +1,25 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "paths": {
+      "@shared/*": [
+        "../ios/src/*"
+      ],
+      "*": [
+        "./node_modules/@types/*",
+        "./node_modules/*"
+      ]
+    }
+  },
+  "include": [
+    "index.ts",
+    "App.tsx",
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

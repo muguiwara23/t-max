@@ -1,0 +1,69 @@
+name: App Android TV (T-Max TV)
+
+# Solo manual. T-Max TV: app aparte para Android TV (React Native TV), comparte datos con la del celular.
+on:
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: android-tv-app-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: clients/tv
+
+jobs:
+  build-android:
+    name: Compilar .apk de TV (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      EXPO_NO_TELEMETRY: '1'
+      EXPO_TV: '1'
+      GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: clients/tv/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Preparar proyecto Android (expo prebuild)
+        run: npx expo prebuild --platform android --no-install
+      - name: Llave propia de T-Max (si está en los secretos del repositorio)
+        env:
+          KS_B64: ${{ secrets.TMAX_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/tmax.keystore"
+            echo "TMAX_KEYSTORE=$RUNNER_TEMP/tmax.keystore" >> "$GITHUB_ENV"
+            echo "Se firmará con la llave propia de T-Max."
+          else
+            echo "Sin llave propia en los secretos: se firma con la llave de depuración."
+          fi
+      - name: "Compilar (release firmado, se instala directo)"
+        working-directory: clients/tv/android
+        env:
+          TMAX_KEYSTORE_PASSWORD: ${{ secrets.TMAX_KEYSTORE_PASSWORD }}
+          TMAX_KEY_ALIAS: ${{ secrets.TMAX_KEY_ALIAS }}
+          TMAX_KEY_PASSWORD: ${{ secrets.TMAX_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=armeabi-v7a,arm64-v8a
+      - name: Renombrar
+        run: |
+          mkdir -p ../../dist
+          cp android/app/build/outputs/apk/release/app-release.apk ../../dist/T-Max-TV.apk
+          ls -la ../../dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: T-Max-TV-apk
+          path: dist/T-Max-TV.apk
