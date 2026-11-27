@@ -11,7 +11,7 @@ import { exportBackup, pickBackup, restoreBackup } from '../data/backup';
 import { clearLog, logAsText, readLog, type DiagEvent } from '../data/diag';
 import { invalidatePlaybackCache } from '../data/playback';
 import { getGlobalSubStyle, setGlobalSubStyle } from '../data/prefs';
-import { DEFAULT_SUB_STYLE, type SubStyle } from '../data/settings-model';
+import { DEFAULT_SUB_STYLE, isStale, type SubStyle } from '../data/settings-model';
 import {
   deleteSource,
   getSecrets,
@@ -28,7 +28,7 @@ import { Button, Chip, Switch, T } from '../ui/kit';
 import { SourceSettingsModal, SubStyleEditor } from './SourceSettings';
 import { useIsCompact, useIsPhone } from '../ui/layout';
 
-export const APP_VERSION = '0.6.3';
+export const APP_VERSION = '0.6.4';
 
 type Cat = 'sources' | 'player' | 'backup' | 'diag' | 'about';
 const CATS: { id: Cat | 'soon'; name: string }[] = [
@@ -201,6 +201,7 @@ export default function SettingsScreen({ onDataChanged, startWithAdd }: { onData
                         : `Actualizada ${ago(s.lastRefresh)}${s.stats ? ` · ${s.stats.channels} canales · ${s.stats.groups} grupos · guía: ${s.stats.programmes} programas${s.stats.movies != null ? ` · ${s.stats.movies} películas · ${s.stats.series ?? 0} series` : ''}` : ''}`}
                     </T>
                     {s.lastError && !busy[s.id] ? <T kind="caption" color={s.lastResult === 'error' ? colors.danger : colors.warning}>{s.lastError}</T> : null}
+                    {s.enabled && !busy[s.id] && isStale(s.lastRefresh, Date.now()) ? <T kind="caption" color={colors.warning}>Lleva más de 1 día sin actualizarse.</T> : null}
                   </View>
                   <Switch label="Fuente activa" value={s.enabled} onChange={async (v) => { await setSourceEnabled(s.id, v); await reload(); onDataChanged(); }} />
                   <Button compact icon="refresh" label="Actualizar" busy={!!busy[s.id]} onPress={() => refresh(s)} />

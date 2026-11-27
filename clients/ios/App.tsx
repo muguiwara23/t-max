@@ -121,6 +121,7 @@ export default function App() {
                 onFullscreen={(list, index, opts) => setPlayer({ list, index, autoRecord: opts?.autoRecord })}
                 onOpenSettings={() => setSection('settings')}
                 focus={liveFocus}
+                onDataChanged={bump}
               />
             </View>
             {visited.movies && (

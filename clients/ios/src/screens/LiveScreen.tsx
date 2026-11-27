@@ -21,6 +21,8 @@ import {
   type SourceFilter,
 } from '../data/queries';
 import { listSources, type Source } from '../data/sources';
+import { isStale } from '../data/settings-model';
+import { refreshSource } from '../data/sync';
 import { colors, font, radius } from '../theme';
 import Icon from '../ui/Icon';
 import { Button, T } from '../ui/kit';
@@ -37,6 +39,8 @@ interface Props {
   onOpenSettings: () => void;
   /** Canal en el que quedó la pantalla completa: la vista previa sigue en ese. */
   focus?: { channel: ChannelItem; n: number } | null;
+  /** Avisar a la app que cambiaron los datos (p. ej. tras actualizar listas desde el aviso). */
+  onDataChanged?: () => void;
 }
 
 const HALF_HOUR = 30 * 60000;
@@ -50,7 +54,7 @@ function useClock(): number {
   return now;
 }
 
-export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, onOpenSettings, focus }: Props) {
+export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, onOpenSettings, focus, onDataChanged }: Props) {
   const now = useClock();
   const phone = useIsPhone();
   const compact = useIsCompact();
@@ -58,6 +62,8 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
   const [sources, setSources] = useState<Source[]>([]);
   const [filter, setFilterState] = useState<SourceFilter>(null);
   const [localVersion, setLocalVersion] = useState(0);
+  const [staleHidden, setStaleHidden] = useState(false);
+  const [staleBusy, setStaleBusy] = useState(false);
   const [allGroup, setAllGroup] = useState<GroupItem | null>(null);
   const [group, setGroup] = useState<GroupItem | null>(null);
   const [channels, setChannels] = useState<ChannelItem[]>([]);
@@ -175,6 +181,15 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
     else setGroup(null);
   });
 
+  const stale = sources.filter((x) => isStale(x.lastRefresh, now));
+  const refreshStale = async () => {
+    setStaleBusy(true);
+    for (const x of stale) await refreshSource(x).catch(() => {});
+    setStaleBusy(false);
+    setLocalVersion((v) => v + 1);
+    onDataChanged?.();
+  };
+
   const openFull = (c: ChannelItem, opts?: { autoRecord?: { until: number | null } }) => {
     const list = visible.length ? visible : [c];
     const idx = Math.max(0, list.findIndex((x) => x.key === c.key));
@@ -232,6 +247,19 @@ export default function LiveScreen({ dataVersion, previewEnabled, onFullscreen, 
             <SourceTab key={src.id} label={src.name} active={filter === src.id} onPress={() => setFilter(src.id)} />
           ))}
         </ScrollView>
+      )}
+
+      {!staleHidden && stale.length > 0 && (
+        <View style={styles.staleBox}>
+          <Icon name="refresh" size={20} color={colors.warning} />
+          <T kind="label" color={colors.text} style={{ flex: 1 }} lines={2}>
+            {stale.length === 1
+              ? `«${stale[0]!.name}» lleva ${staleAge(stale[0]!.lastRefresh, now)} sin actualizarse. Los canales y la guía pueden estar viejos.`
+              : `${stale.length} listas llevan más de 1 día sin actualizarse: ${stale.map((x) => x.name).join(', ')}.`}
+          </T>
+          <Button compact variant="primary" label={staleBusy ? 'Actualizando…' : 'Actualizar'} disabled={staleBusy} onPress={() => void refreshStale()} />
+          <Button compact label="Ahora no" onPress={() => setStaleHidden(true)} />
+        </View>
       )}
 
       {empty ? (
@@ -429,7 +457,14 @@ function ChannelList({ channels, selectedKey, nowNext, onPick, onLong }: {
   );
 }
 
+function staleAge(last: number | null, now: number): string {
+  if (!last) return 'tiempo';
+  const d = Math.floor((now - last) / 86400000);
+  return d <= 1 ? 'más de 1 día' : `${d} días`;
+}
+
 const styles = StyleSheet.create({
+  staleBox: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 14, borderRadius: radius.lg, backgroundColor: '#FBBF241F', borderWidth: 1, borderColor: '#FBBF2459' },
   tab: { height: 38, paddingHorizontal: 16, borderRadius: radius.pill, backgroundColor: colors.panel, flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 8 },
   header: { height: 56, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 4 },
   segment: { flexDirection: 'row', backgroundColor: colors.panel, borderRadius: radius.pill, padding: 4, gap: 4 },

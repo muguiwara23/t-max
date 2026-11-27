@@ -52,7 +52,7 @@ function langName(l: string): string {
   return k in m ? m[k]! : l.toUpperCase().slice(0, 3);
 }
 
-/** Etiquetas cortas en orden: calidad, códec/fps, HDR, audios, subtítulos, velocidad, búfer. */
+/** Etiquetas cortas en orden: calidad, códec/fps, HDR, audios, subtítulos, velocidad. */
 export function factChips(f: StreamFacts): { text: string; strong?: boolean }[] {
   const out: { text: string; strong?: boolean }[] = [];
   const q = qualityLabel(f.width, f.height);
@@ -69,6 +69,5 @@ export function factChips(f: StreamFacts): { text: string; strong?: boolean }[] 
   if (f.format) out.push({ text: f.format.toUpperCase() });
   const r = rateLabel(f.rate);
   if (r) out.push({ text: `↓ ${r}` });
-  if (f.buffered !== undefined && f.buffered >= 0) out.push({ text: `búfer ${Math.round(f.buffered)} s` });
   return out;
 }

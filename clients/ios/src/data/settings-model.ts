@@ -76,6 +76,12 @@ export function normalizeSourceSettings(raw: unknown): SourceSettings {
 }
 
 /** ¿Toca actualizar sola esta fuente? */
+/** Una lista que lleva más de 1 día sin actualizarse con éxito merece un aviso. */
+export const STALE_MS = 24 * 3600000;
+export function isStale(lastRefresh: number | null, now: number): boolean {
+  return !lastRefresh || now - lastRefresh > STALE_MS;
+}
+
 export function needsAutoRefresh(settings: SourceSettings, lastRefresh: number | null, now: number): boolean {
   const h = settings.autoRefreshHours ?? 0;
   if (h <= 0) return false;

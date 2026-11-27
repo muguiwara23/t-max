@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { dvrTick, overlaps, PAD_AFTER_MS, PAD_BEFORE_MS, recordingFileName } from '../src/data/dvr-model.ts';
-import { DEFAULT_SUB_STYLE, needsAutoRefresh, normalizeSourceSettings, normalizeSubStyle, subStyleToMpv } from '../src/data/settings-model.ts';
+import { DEFAULT_SUB_STYLE, isStale, needsAutoRefresh, normalizeSourceSettings, normalizeSubStyle, subStyleToMpv } from '../src/data/settings-model.ts';
 
 test('Ajustes por fuente: valores inválidos vuelven a los de siempre', () => {
   const s = normalizeSourceSettings({ format: 'xyz', epgOffsetHours: 99, autoRefreshHours: -3, userAgent: '  VLC/3  ' });
@@ -59,10 +59,17 @@ test('Info del video: calidad, audios y velocidad', () => {
   assert.equal(qualityLabel(720, 576), 'SD');
   assert.equal(rateLabel(750000), '6.0 Mbps');
   const chips = factChips({ width: 1920, height: 1080, fps: 59.94, videoCodec: 'h264', audio: [{ lang: 'spa', title: '', selected: true }, { lang: 'eng', title: '', selected: false }], rate: 1e6, buffered: 7.6 });
-  assert.deepEqual(chips.map((c) => c.text), ['FHD · 1080p', 'H.264 · 60 fps', '2 audios · ES EN', '↓ 8.0 Mbps', 'búfer 8 s']);
+  assert.deepEqual(chips.map((c) => c.text), ['FHD · 1080p', 'H.264 · 60 fps', '2 audios · ES EN', '↓ 8.0 Mbps']);
 });
 
 test('Info del video: nombre de códec largo de mpv se acorta', () => {
   assert.equal(factChips({ videoCodec: 'H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10', fps: 30 })[0]!.text, 'H.264 · 30 fps');
   assert.equal(factChips({ videoCodec: 'H.265 / HEVC (High Efficiency Video Coding)' })[0]!.text, 'HEVC');
+});
+
+test('aviso de lista sin actualizar: más de 1 día', () => {
+  const now = Date.UTC(2026, 10, 27, 12);
+  assert.equal(isStale(now - 23 * 3600000, now), false);
+  assert.equal(isStale(now - 25 * 3600000, now), true);
+  assert.equal(isStale(null, now), true);
 });

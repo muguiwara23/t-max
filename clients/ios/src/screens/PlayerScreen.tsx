@@ -18,7 +18,7 @@ import { useBack } from '../ui/back';
 import { useIsCompact } from '../ui/layout';
 
 import { hhmm, type ProgrammeRow } from '../data/mapping';
-import { markWatched, programmesFor, type ChannelItem } from '../data/queries';
+import { markWatched, programmesFor, toggleFavorite, type ChannelItem } from '../data/queries';
 import { colors, radius } from '../theme';
 import Icon from '../ui/Icon';
 import { T } from '../ui/kit';
@@ -56,6 +56,16 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
   const [now, setNow] = useState(Date.now());
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const channel = list[index]!;
+  // Favoritos cambiados aquí (la lista llega de fuera y no se vuelve a leer mientras se ve).
+  const [favs, setFavs] = useState<Record<string, boolean>>({});
+  const isFav = (c: ChannelItem): boolean => favs[c.key] ?? c.favorite;
+  const toggleFav = async () => {
+    const v = !isFav(channel);
+    setFavs((f) => ({ ...f, [channel.key]: v }));
+    poke();
+    await toggleFavorite(channel.key, v).catch(() => setFavs((f) => ({ ...f, [channel.key]: !v })));
+  };
+  const leave = () => onClose({ ...channel, favorite: isFav(channel) });
   const [rec, setRec] = useState<{ id: string; file: File; at: number; until: number | null } | null>(null);
   const recRef = useRef(rec);
   recRef.current = rec;
@@ -209,7 +219,7 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
     if (panel !== 'none') setPanel('none');
     else {
       void stopRec();
-      onClose(channel);
+      leave();
     }
   });
 
@@ -298,10 +308,14 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
           <View style={styles.topScrim} pointerEvents="none" />
           <View style={styles.bottomScrim} pointerEvents="none" />
           <View style={styles.top} pointerEvents="box-none">
-            <Pressable accessibilityLabel="Volver" onPress={() => { void stopRec(); onClose(channel); }} style={styles.round}><Icon name="back" size={20} /></Pressable>
+            <Pressable accessibilityLabel="Volver" onPress={() => { void stopRec(); leave(); }} style={styles.round}><Icon name="back" size={20} /></Pressable>
             <View style={{ flex: 1, marginLeft: 12 }}>
               <T kind="title" weight="bold" lines={1}>{channel.number ?? ''} · {channel.name}</T>
             </View>
+            <Pressable accessibilityLabel={isFav(channel) ? 'Quitar de favoritos' : 'Agregar a favoritos'} onPress={() => void toggleFav()}
+              style={[styles.round, isFav(channel) && { backgroundColor: colors.accentSoft }]}>
+              <Icon name={isFav(channel) ? 'starFilled' : 'star'} size={20} color={isFav(channel) ? colors.accent : colors.text} />
+            </Pressable>
             {rec ? (
               <Pressable accessibilityLabel="Detener grabación" onPress={() => void stopRec()} style={[styles.pill, { backgroundColor: '#FF5A4E33' }]}>
                 <View style={styles.liveDot} />
@@ -376,7 +390,7 @@ export default function PlayerScreen({ list, startIndex, onClose, autoRecord }: 
             {state === 'buffering' || !startMs ? (
               <T kind="caption" color={colors.textSecondary} style={{ textAlign: 'center' }}>{state === 'buffering' ? 'Cargando…' : ' '}</T>
             ) : (
-              <StreamInfo center facts={{ ...facts, format: startMs.format }} extra={`arranque ${startMs.ms} ms`} />
+              <StreamInfo center facts={{ ...facts, format: startMs.format }} />
             )}
             <View style={styles.controls}>
               <Ctl compact={compact} icon="subtitles" label="Subtítulos" onPress={() => openTracks('subs')} />
