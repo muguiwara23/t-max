@@ -203,3 +203,17 @@ function FirstIp() as string
     end for
     return ""
 end function
+
+' "0.3.1" es más nueva que "0.3.0"
+function VerNewer(a as string, b as string) as boolean
+    pa = a.Split(".")
+    pb = b.Split(".")
+    for i = 0 to 2
+        x = 0
+        y = 0
+        if i < pa.Count() then x = pa[i].ToInt()
+        if i < pb.Count() then y = pb[i].ToInt()
+        if x <> y then return x > y
+    end for
+    return false
+end function

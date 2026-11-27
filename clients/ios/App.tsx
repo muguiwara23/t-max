@@ -25,6 +25,7 @@ import { colors } from './src/theme';
 import Rail, { type Section } from './src/ui/Rail';
 import { useIsCompact, useIsPhone } from './src/ui/layout';
 import { useBack } from './src/ui/back';
+import UpdateBanner from './src/ui/UpdateBanner';
 
 
 export default function App() {
@@ -141,6 +142,7 @@ export default function App() {
         </View>
       </SafeAreaView>
       <DvrEngine onChange={() => setDvrVersion((v) => v + 1)} />
+      <UpdateBanner hidden={!!player || !!vodPlayer} />
       {vodPlayer && <VodPlayerScreen request={vodPlayer} onClose={() => { setVodPlayer(null); setProgressVersion((v) => v + 1); }} />}
       {player && <PlayerScreen list={player.list} startIndex={player.index} autoRecord={player.autoRecord} onClose={(last) => { setPlayer(null); setLiveFocus({ channel: last, n: Date.now() }); bump(); }} />}
     </SafeAreaProvider>

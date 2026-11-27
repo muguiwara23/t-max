@@ -2,7 +2,7 @@
   "expo": {
     "name": "T-Max",
     "slug": "t-max",
-    "version": "0.6.4",
+    "version": "0.7.0",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -11,7 +11,7 @@
       "supportsTablet": true,
       "requireFullScreen": true,
       "bundleIdentifier": "com.muguiwara23.tmax",
-      "buildNumber": "20",
+      "buildNumber": "21",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
@@ -56,11 +56,12 @@
           "isAccessMediaLocationEnabled": false
         }
       ],
-      "./plugins/android-tv"
+      "./plugins/android-tv",
+      "./plugins/android-signing"
     ],
     "android": {
       "package": "com.muguiwara23.tmax",
-      "versionCode": 5,
+      "versionCode": 6,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0A0B0D"
@@ -69,7 +70,8 @@
         "android.permission.INTERNET",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.SCHEDULE_EXACT_ALARM",
-        "android.permission.WAKE_LOCK"
+        "android.permission.WAKE_LOCK",
+        "android.permission.REQUEST_INSTALL_PACKAGES"
       ]
     }
   }

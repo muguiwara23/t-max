@@ -33,6 +33,15 @@ sub work()
             movieInfo(src, req.id, out)
         else if req.kind = "seriesInfo" then
             seriesInfo(src, req.id, out)
+        else if req.kind = "update" then
+            r = HttpGet("https://github.com/muguiwara23/t-max/releases/latest/download/versions.json", {}, 15000)
+            j = invalid
+            if r.code = 200 then j = ParseJson(r.body)
+            if j <> invalid then
+                out.roku = Txt(j.roku)
+                out.notes = Txt(j.notes)
+                out.ok = true
+            end if
         else if req.kind = "watchdog" then
             t = stalkerToken(src, false)
             if t <> "" then HttpGet(StalkerApi(src.server) + "?type=watchdog&action=get_events&event_active_id=0&init=0&cur_play_type=1&JsHttpRequest=1-xml", StalkerHeaders(src, t), 15000)

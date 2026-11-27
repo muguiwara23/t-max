@@ -96,6 +96,14 @@ sub init()
     m.web.observeField("changed", "onWebChanged")
     m.web.control = "run"
 
+    ' ¿Salió una versión nueva? (solo se consulta GitHub, máx. una vez al día)
+    m.appVersion = CreateObject("roAppInfo").GetVersion()
+    m.newRoku = ""
+    if m.reg.Exists("updRoku") and VerNewer(m.reg.Read("updRoku"), m.appVersion) then m.newRoku = m.reg.Read("updRoku")
+    lastChk = 0
+    if m.reg.Exists("updChk") then lastChk = m.reg.Read("updChk").ToInt()
+    if NowSecs() - lastChk > 86400 then runTask({ kind: "update", src: {} }, "onUpdateInfo")
+
     m.railItems = [
         { t: "En vivo", i: "pkg:/images/ic_live.png" },
         { t: "Películas", i: "pkg:/images/ic_movies.png" },
@@ -1538,7 +1546,22 @@ sub showSettings()
         m.setUrl.text = "http://" + ip + ":8888"
         m.setPin.text = "PIN  " + m.pin
     end if
-    m.setInfo.text = "Elige una fuente a la izquierda para usarla, cambiar su formato, actualizar sus canales o borrarla." + Chr(10) + Chr(10) + "T-Max no tiene servidores ni cuentas: el Roku habla directo con tus fuentes." + Chr(10) + Chr(10) + "T-Max 0.2.0 para Roku · GPL-3.0"
+    upd = ""
+    if m.newRoku <> "" then upd = "YA SALIÓ T-Max " + m.newRoku + ": instálala desde T-Max en el celular (mismo Wi-Fi) en Ajustes → Actualizaciones → Enviar al Roku." + Chr(10) + Chr(10)
+    m.setInfo.text = upd + "Elige una fuente a la izquierda para usarla, cambiar su formato, actualizar sus canales o borrarla." + Chr(10) + Chr(10) + "T-Max no tiene servidores ni cuentas: el Roku habla directo con tus fuentes." + Chr(10) + Chr(10) + "T-Max " + m.appVersion + " para Roku · GPL-3.0"
+end sub
+
+sub onUpdateInfo(ev as object)
+    r = ev.getData()
+    if not r.ok then return
+    m.reg.Write("updChk", NowSecs().ToStr())
+    m.reg.Write("updRoku", r.roku)
+    m.reg.Flush()
+    if VerNewer(r.roku, m.appVersion) then
+        m.newRoku = r.roku
+        showMsg("Ya salió T-Max " + r.roku + " para Roku. Instálala desde T-Max en el celular: Ajustes → Actualizaciones.", true)
+        if m.section = 3 and m.listMode = "settings" then showSettings()
+    end if
 end sub
 
 function defaultStr(v as dynamic, d as string) as string

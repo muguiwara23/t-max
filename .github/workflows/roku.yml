@@ -3,6 +3,7 @@ name: App Roku (T-Max)
 # Solo manual: Arturo la lanza desde la pestaña Actions cuando quiera el .zip.
 on:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read

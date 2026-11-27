@@ -1,6 +1,6 @@
 // Ajustes: Fuentes (cada una con sus propios ajustes), Reproductor y subtítulos, Respaldo y Acerca de.
 import { useEffect, useState } from 'react';
-import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Keyboard, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
 
 import Pressable from '../ui/Press';
 
@@ -27,14 +27,18 @@ import { colors, font, radius } from '../theme';
 import { Button, Chip, Switch, T } from '../ui/kit';
 import { SourceSettingsModal, SubStyleEditor } from './SourceSettings';
 import { useIsCompact, useIsPhone } from '../ui/layout';
+import { cachedUpdate, checkForUpdate, getRokuTarget, hasAppUpdate, installAndroidUpdate, pushToRoku } from '../data/updates';
+import type { UpdateInfo } from '../data/update-model';
+import { APP_VERSION } from '../version';
 
-export const APP_VERSION = '0.6.4';
 
-type Cat = 'sources' | 'player' | 'backup' | 'diag' | 'about';
+
+type Cat = 'sources' | 'player' | 'backup' | 'updates' | 'diag' | 'about';
 const CATS: { id: Cat | 'soon'; name: string }[] = [
   { id: 'sources', name: 'Fuentes' },
   { id: 'player', name: 'Reproductor y subtítulos' },
   { id: 'backup', name: 'Respaldo' },
+  { id: 'updates', name: 'Actualizaciones' },
   { id: 'diag', name: 'Diagnóstico' },
   { id: 'soon', name: 'Apariencia' },
   { id: 'soon', name: 'Control parental' },
@@ -64,6 +68,48 @@ export default function SettingsScreen({ onDataChanged, startWithAdd }: { onData
   const [subs, setSubs] = useState<SubStyle>(DEFAULT_SUB_STYLE);
   const [backupBusy, setBackupBusy] = useState<string | null>(null);
   const [log, setLog] = useState<DiagEvent[]>([]);
+  const [upd, setUpd] = useState<UpdateInfo | null>(null);
+  const [updMsg, setUpdMsg] = useState<string | null>(null);
+  const [rokuIp, setRokuIp] = useState('');
+  const [rokuPass, setRokuPass] = useState('');
+  const [rokuMsg, setRokuMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [rokuBusy, setRokuBusy] = useState(false);
+  useEffect(() => {
+    if (cat !== 'updates') return;
+    cachedUpdate().then(setUpd).catch(() => {});
+    getRokuTarget().then((t) => { setRokuIp(t.ip); setRokuPass(t.password); }).catch(() => {});
+  }, [cat]);
+  const checkNow = async () => {
+    setUpdMsg('Buscando…');
+    try {
+      const i = await checkForUpdate(true);
+      setUpd(i);
+      setUpdMsg(i && hasAppUpdate(i) ? null : i ? 'Estás al día.' : 'Todavía no hay versiones publicadas.');
+    } catch (e) {
+      setUpdMsg(e instanceof Error ? `No se pudo revisar: ${e.message}` : 'No se pudo revisar.');
+    }
+  };
+  const installNow = async () => {
+    if (!upd) return;
+    if (Platform.OS !== 'android') return void Linking.openURL(upd.page || upd.ios).catch(() => {});
+    try {
+      await installAndroidUpdate(upd, (p) => setUpdMsg(`Descargando ${p}%…`));
+      setUpdMsg(null);
+    } catch (e) {
+      setUpdMsg(e instanceof Error ? e.message : 'No se pudo descargar.');
+    }
+  };
+  const sendRoku = async () => {
+    setRokuBusy(true);
+    setRokuMsg(null);
+    try {
+      setRokuMsg(await pushToRoku(rokuIp, rokuPass, (t) => setRokuMsg({ ok: true, text: t })));
+    } catch (e) {
+      setRokuMsg({ ok: false, text: e instanceof Error ? e.message : 'No se pudo enviar.' });
+    } finally {
+      setRokuBusy(false);
+    }
+  };
   useEffect(() => {
     if (cat === 'diag') readLog().then(setLog).catch(() => setLog([]));
   }, [cat]);
@@ -285,6 +331,48 @@ export default function SettingsScreen({ onDataChanged, startWithAdd }: { onData
                   </T>
                 </View>
               ))}
+            </>
+          )}
+
+          {cat === 'updates' && (
+            <>
+              <T kind="title" weight="bold">Actualizaciones</T>
+              <T>Tienes T-Max {APP_VERSION}.</T>
+              {upd && hasAppUpdate(upd) ? (
+                <View style={{ gap: 8 }}>
+                  <T weight="bold" color={colors.accent}>Ya salió T-Max {upd.app}{upd.date ? ` · ${upd.date}` : ''}</T>
+                  {upd.notes ? <T kind="label" color={colors.textSecondary}>{upd.notes}</T> : null}
+                  <Button variant="primary" icon="refresh" style={{ alignSelf: 'flex-start' }}
+                    label={Platform.OS === 'android' ? 'Descargar e instalar' : 'Abrir la descarga'} onPress={() => void installNow()} />
+                </View>
+              ) : null}
+              {updMsg ? <T kind="label" color={colors.textSecondary}>{updMsg}</T> : null}
+              <Button icon="refresh" label="Buscar ahora" style={{ alignSelf: 'flex-start' }} onPress={() => void checkNow()} />
+              <T kind="caption" color={colors.textSecondary}>
+                T-Max revisa sola una vez al día si se publicó una versión nueva. Solo consulta el repositorio en GitHub; no envía ningún dato tuyo.
+                {Platform.OS === 'android' ? ' En Android baja el archivo y abre el instalador: solo toca "Instalar".' : ' En iPhone/iPad avisa y abre la descarga para firmarla como siempre.'}
+              </T>
+
+              <View style={{ height: 1, backgroundColor: colors.hover, marginVertical: 6 }} />
+              <T kind="title" weight="bold">Enviar actualización a un Roku</T>
+              <T kind="label" color={colors.textSecondary}>
+                Con el celular en el mismo Wi-Fi que el Roku: baja la versión más reciente de T-Max para Roku y la instala, sin computadora.
+                Una sola vez en el Roku: activa el modo desarrollador (en el control: Inicio ×3, Arriba ×2, Derecha, Izquierda, Derecha, Izquierda, Derecha) y anota la IP y la contraseña que elijas.
+              </T>
+              <View style={{ flexDirection: phone ? 'column' : 'row', gap: 12 }}>
+                <View style={{ flex: 1, gap: 6 }}>
+                  <T kind="label" color={colors.textSecondary}>IP del Roku</T>
+                  <TextInput value={rokuIp} onChangeText={setRokuIp} placeholder="192.168.1.40" placeholderTextColor={colors.textTertiary}
+                    keyboardType="numbers-and-punctuation" autoCapitalize="none" autoCorrect={false} style={styles.input} />
+                </View>
+                <View style={{ flex: 1, gap: 6 }}>
+                  <T kind="label" color={colors.textSecondary}>Contraseña de desarrollador</T>
+                  <TextInput value={rokuPass} onChangeText={setRokuPass} secureTextEntry autoCapitalize="none" autoCorrect={false} style={styles.input} />
+                </View>
+              </View>
+              <Button variant="primary" icon="refresh" label={rokuBusy ? 'Enviando…' : 'Enviar al Roku'} disabled={rokuBusy} style={{ alignSelf: 'flex-start' }} onPress={() => void sendRoku()} />
+              {rokuMsg ? <T kind="label" color={rokuMsg.ok ? colors.textSecondary : colors.danger}>{rokuMsg.text}</T> : null}
+              <T kind="caption" color={colors.textSecondary}>La IP y la contraseña se guardan cifradas solo en este aparato.</T>
             </>
           )}
 

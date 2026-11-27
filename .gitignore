@@ -32,3 +32,8 @@ Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+
+# Llaves de firma: nunca al repositorio (es público)
+*.keystore
+*.jks
+TMAX_KEYSTORE_B64*

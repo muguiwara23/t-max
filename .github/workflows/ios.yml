@@ -3,6 +3,7 @@ name: App iOS (T-Max)
 # Solo manual: Arturo la lanza desde la pestaña Actions (las compilaciones de macOS son las costosas).
 on:
   workflow_dispatch:
+  workflow_call:
 
 concurrency:
   group: ios-app-${{ github.ref }}

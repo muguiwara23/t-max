@@ -1,0 +1,71 @@
+name: Publicar versión (iOS, Android y Roku)
+
+# Solo manual. Compila las tres apps y crea un Release en este repositorio con los archivos
+# y un versions.json: las apps lo leen (una vez al día) para avisar que salió una versión nueva.
+on:
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: "Qué trae esta versión (se ve en el aviso de las apps). Opcional."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    uses: ./.github/workflows/android.yml
+    secrets: inherit
+  ios:
+    uses: ./.github/workflows/ios.yml
+  roku:
+    uses: ./.github/workflows/roku.yml
+
+  release:
+    name: Crear el Release
+    needs: [android, ios, roku]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: art
+      - name: Preparar archivos y versions.json
+        env:
+          NOTES: ${{ inputs.notes }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          APP=$(node -p "require('./clients/ios/app.json').expo.version")
+          M=clients/roku/manifest
+          ROKU="$(grep '^major_version=' $M | cut -d= -f2).$(grep '^minor_version=' $M | cut -d= -f2).$(grep '^build_version=' $M | cut -d= -f2)"
+          TAG="v$APP"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::La versión $TAG ya está publicada. Primero hay que subir el número de versión."
+            exit 1
+          fi
+          mkdir -p out
+          cp art/T-Max-apk/T-Max-android.apk out/T-Max-android.apk
+          cp art/T-Max-ipa-sin-firmar/*.ipa out/T-Max-ios.ipa
+          cp art/T-Max-Roku/T-Max-Roku.zip out/T-Max-Roku.zip
+          BASE="https://github.com/$REPO/releases/download/$TAG"
+          APP="$APP" ROKU="$ROKU" BASE="$BASE" PAGE="https://github.com/$REPO/releases/tag/$TAG" node -e '
+            const e = process.env;
+            const v = { app: e.APP, roku: e.ROKU, date: new Date().toISOString().slice(0, 10), notes: e.NOTES || "",
+              page: e.PAGE, android: e.BASE + "/T-Max-android.apk", ios: e.BASE + "/T-Max-ios.ipa", rokuZip: e.BASE + "/T-Max-Roku.zip" };
+            require("fs").writeFileSync("out/versions.json", JSON.stringify(v, null, 2));'
+          cat out/versions.json
+          ls -la out
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "APP=$APP" >> "$GITHUB_ENV"
+          echo "ROKU=$ROKU" >> "$GITHUB_ENV"
+      - name: Crear el Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          BODY="T-Max $APP para iPhone/iPad (.ipa sin firmar), Android y Android TV (.apk) · T-Max $ROKU para Roku (.zip)."
+          if [ -n "$NOTES" ]; then BODY="$NOTES"$'\n\n'"$BODY"; fi
+          gh release create "$TAG" out/* --title "T-Max $APP" --notes "$BODY" --latest --target "$GITHUB_SHA"
